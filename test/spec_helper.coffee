@@ -9,7 +9,6 @@ global.xits = global.xit
 
 global.sinon = require 'sinon'
 global.chai = require 'chai'
-global.request = require 'supertest'
 sinonChai = require 'sinon-chai'
 global.should = global.chai.should()
 global.expect = global.chai.expect

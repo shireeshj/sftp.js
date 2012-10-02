@@ -7,9 +7,11 @@
 var sftp = new SFTP({
   host: 'blahblah.com'
 , port: 22
-, username: 'action'
+, user: 'action'
 , key: 'path/to/private.key'
-}, function(err, sftp) {
+});
+
+sftp.connect(function(err) {
   // once sftp is connected this callback is invoked
 });
 
@@ -35,7 +37,7 @@ sftp.rm('path/to/file', function(err) {});
 sftp.rmdir('path/to/dir', function(err) {});
 
 sftp.mkdir('path/to/new/dir', function(err) {});
-sftp.on('kill', function(err) {});
+sftp.on('close', function(err) {});
 
 // to be implemented later:
 
@@ -47,3 +49,4 @@ sftp.df('user', 'path/to/heaven', function (err, info:Object) {
 });
 sftp.ln('path/to/file', 'path/to/link', function(err) {});
 ```
+
