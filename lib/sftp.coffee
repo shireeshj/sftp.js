@@ -58,5 +58,4 @@ module.exports = class SFTP
   onPTYClose: (hadError) ->
 
   ls: (filePath, cb) ->
-    this.connect ->
-      cb []
+    this.connect -> cb(null, [])
