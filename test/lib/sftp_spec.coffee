@@ -302,3 +302,52 @@ describe 'SFTP', ->
             Can't ls: "/home/ubuntu/path/to/dir" not found
           '''
           done()
+
+  describe '#mkdir', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub sftp, 'runCommand'
+
+    it 'calls runCommand with mkdir command', ->
+      sftp.mkdir 'tmp', cbSpy
+      expect(sftp.runCommand).to.have.been.calledWith 'mkdir tmp'
+
+    context 'when runCommand succeeds', ->
+      beforeEach ->
+        output = '''
+          mkdir tmp
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns no errors', (done) ->
+        sftp.mkdir 'tmp', (err) ->
+          expect(err).not.to.exist
+          done()
+
+    context 'when runCommand fails with bad path', ->
+      beforeEach ->
+        output = '''
+          mkdir tmp/bin
+          Couldn't create directory: No such file or directory
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.mkdir 'tmp/bin', (err) ->
+          expect(err).to.equal 'Couldn\'t create directory: No such file or directory'
+          done()
+
+    context 'when runCommand fails with existing path', ->
+      beforeEach ->
+        output = '''
+          mkdir tmp/bin
+          Couldn't create directory: Failure
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.mkdir 'tmp/bin', (err) ->
+          expect(err).to.equal 'Couldn\'t create directory: Failure'
+          done()
