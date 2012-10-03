@@ -2,6 +2,7 @@ _ = require 'underscore'
 fs = require 'fs'
 tmp = require 'tmp'
 pty = require 'pty.js'
+CommandQueue = require './command_queue'
 
 module.exports = class SFTP
   constructor: (login) ->
@@ -9,7 +10,7 @@ module.exports = class SFTP
     @port = login.port
     @user = login.user
     @key = login.key
-    @commandStack = []
+    @queue = new CommandQueue
 
   writeKeyFile: (callback) -> # callback(err, sshArgs, deleteKeyFile)
     tmp.file (err, path, fd) =>
@@ -49,13 +50,15 @@ module.exports = class SFTP
         return
       @pty.once 'data', ->
         deleteKeyFile()
-      @pty.on 'data',  _.bind(@onPTYData, this)
       @pty.on 'close', _.bind(@onPTYClose, this)
       callback null
 
-  onPTYData: (data) ->
-
   onPTYClose: (hadError) ->
 
-  ls: (filePath, cb) ->
-    this.connect -> cb(null, [])
+  runCommand: (command, callback) ->
+    @queue.enqueue =>
+      @pty.once 'data', =>
+        callback.apply this, arguments
+        @queue.dequeue()
+      @pty.write command + "\n"
+

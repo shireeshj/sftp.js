@@ -3,6 +3,7 @@ fs = require 'fs'
 tmp = require 'tmp'
 pty = require 'pty.js'
 EventEmitter = require('events').EventEmitter
+CommandQueue = require '../../lib/command_queue'
 
 describe 'SFTP', ->
   sftp = null
@@ -15,6 +16,9 @@ describe 'SFTP', ->
     expect(sftp.port).to.equal 2222
     expect(sftp.user).to.equal 'peter'
     expect(sftp.key).to.equal 'some rsa private key'
+
+  it 'initializes a command queue', ->
+    expect(sftp.queue).to.be.an.instanceOf CommandQueue
 
   describe '#writeKeyFile', ->
     err = cbSpy = null
@@ -159,7 +163,6 @@ describe 'SFTP', ->
 
         beforeEach ->
           mockPty = new EventEmitter()
-          sinon.stub sftp, 'onPTYData'
           sinon.stub sftp, 'onPTYClose'
           sinon.stub pty, 'spawn', (cmd, args) ->
             expect(cmd).to.equal '/usr/bin/sftp'
@@ -182,31 +185,39 @@ describe 'SFTP', ->
               mockPty.emit 'data'
               expect(deleteKeyFileSpy).to.have.been.calledOnce # only gets called once
 
-          context 'data', ->
-            it 'is handled by #onPTYData', ->
-              mockPty.emit 'data'
-              expect(sftp.onPTYData).to.have.been.called
-
           context 'close', ->
             it 'is handled by #onPTYClose', ->
               mockPty.emit 'close'
               expect(sftp.onPTYClose).to.have.been.called
 
-  describe '#ls', ->
-    context 'when the path is invalid', ->
-      it 'should return an empty array', ->
-        sftp.ls '', (err, fileList) ->
-          expect(err).to.eql(null)
-          expect(fileList).to.deep.equal([])
+  describe '#runCommand', ->
+    cbSpy = null
 
-    context 'when there are no files or directories in the current directory', ->
-      it 'should return an empty array', ->
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sftp.pty = new EventEmitter
+      sftp.pty.write = ->
 
-    context 'when there are only files in the current directory', ->
-      it 'should return the files in an array'
+    it 'enqueues a function', ->
+      sftp.runCommand 'ls', cbSpy
+      expect(sftp.queue.items).to.have.length 1
 
-    context 'when there are only directories in the current directory', ->
-      it 'should return the directories in an array'
+    describe 'the enqueued function', ->
+      beforeEach ->
+        sinon.stub sftp.queue, 'dequeue'
+        sinon.stub sftp.pty, 'write'
+        sftp.runCommand 'ls -l', cbSpy
 
-    context 'when there are files and directories in the current directory', ->
-      it 'should return the files and directories in an array'
+      it 'creates a one-time event handler for "data" event on @pty that calls' +
+         'the callback and then dequeues the command queue', ->
+        expect(cbSpy).not.to.have.been.called
+        expect(sftp.queue.dequeue).not.to.have.been.called
+        sftp.pty.emit 'data', 'some arg', 'some other arg'
+        expect(cbSpy).to.have.been.calledWith 'some arg', 'some other arg'
+        expect(sftp.queue.dequeue).to.have.been.called
+        sftp.pty.emit 'data', 'some arg', 'some other arg'
+        expect(cbSpy).to.have.been.calledOnce
+        expect(sftp.queue.dequeue).to.have.been.calledOnce
+
+      it 'writes the command to @pty', ->
+        expect(sftp.pty.write).to.have.been.calledWith "ls -l\n"
