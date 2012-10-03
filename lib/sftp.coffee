@@ -78,10 +78,12 @@ module.exports = class SFTP
       lines = data.split "\n"
       lines.shift()
       lines.pop()
-      files = lines.map (line) ->
-        match = line.match /^(\S+\s+){8}(.+)$/
-        name = match[2]
-        isDir = line[0] == 'd'
-        [name, isDir]
-      callback null, files
-
+      if lines[0].match /No\ssuch\sfile\sor\sdirectory/
+        callback lines.join("\n"), null
+      else
+        files = lines.map (line) ->
+          match = line.match /^(\S+\s+){8}(.+)$/
+          name = match[2]
+          isDir = line[0] == 'd'
+          [name, isDir]
+        callback null, files
