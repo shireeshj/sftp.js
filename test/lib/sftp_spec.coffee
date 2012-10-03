@@ -193,8 +193,17 @@ describe 'SFTP', ->
               expect(sftp.onPTYClose).to.have.been.called
 
   describe '#ls', ->
+    beforeEach ->
+      sinon.stub sftp, 'connect'
+      sinon.stub sftp, 'writeKeyFile'
+
+    context 'when the path is invalid', ->
+      it 'should return an empty array', ->
+        sftp.ls '', (err, fileList) ->
+          expects(fileList).to.be([])
+
     context 'when there are no files or directories in the current directory', ->
-      it 'should return an empty array'
+      it 'should return an empty array', ->
 
     context 'when there are only files in the current directory', ->
       it 'should return the files in an array'
