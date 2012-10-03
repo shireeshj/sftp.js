@@ -192,3 +192,15 @@ describe 'SFTP', ->
               mockPty.emit 'close'
               expect(sftp.onPTYClose).to.have.been.called
 
+  describe '#ls', ->
+    context 'when there are no files or directories in the current directory', ->
+      it 'should return an empty array'
+
+    context 'when there are only files in the current directory', ->
+      it 'should return the files in an array'
+
+    context 'when there are only directories in the current directory', ->
+      it 'should return the directories in an array'
+
+    context 'when there are files and directories in the current directory', ->
+      it 'should return the files and directories in an array'
