@@ -57,8 +57,31 @@ module.exports = class SFTP
 
   runCommand: (command, callback) ->
     @queue.enqueue =>
-      @pty.once 'data', =>
-        callback.apply this, arguments
-        @queue.dequeue()
+      buffer = []
+      dataListener = (data) =>
+        data = data.replace /\r/g, ''
+        buffer.push data
+        if data.indexOf("\nsftp> ") != -1
+          @pty.removeListener 'data', dataListener
+          callback buffer.join ''
+          @queue.dequeue()
+      @pty.on 'data', dataListener
       @pty.write command + "\n"
+
+  @escape: (string) ->
+    if typeof string == 'string'
+      return "'" + string.replace(/'/g, "'\"'\"'") + "'"
+    null
+
+  ls: (filePath, callback) ->
+    this.runCommand "ls -l #{@constructor.escape filePath}", (data) ->
+      lines = data.split "\n"
+      lines.shift()
+      lines.pop()
+      files = lines.map (line) ->
+        match = line.match /^(\S+\s+){8}(.+)$/
+        name = match[2]
+        isDir = line[0] == 'd'
+        [name, isDir]
+      callback null, files
 

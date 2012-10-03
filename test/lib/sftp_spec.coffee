@@ -208,16 +208,81 @@ describe 'SFTP', ->
         sinon.stub sftp.pty, 'write'
         sftp.runCommand 'ls -l', cbSpy
 
-      it 'creates a one-time event handler for "data" event on @pty that calls' +
-         'the callback and then dequeues the command queue', ->
+      it 'creates a event handler for "data" event on @pty that buffers' +
+         'the output from the server and then makes a callback and dequeues' +
+         'the command queue when it is done', ->
         expect(cbSpy).not.to.have.been.called
         expect(sftp.queue.dequeue).not.to.have.been.called
-        sftp.pty.emit 'data', 'some arg', 'some other arg'
-        expect(cbSpy).to.have.been.calledWith 'some arg', 'some other arg'
-        expect(sftp.queue.dequeue).to.have.been.called
-        sftp.pty.emit 'data', 'some arg', 'some other arg'
+        sftp.pty.emit 'data', 'ls'
+        sftp.pty.emit 'data', " -l\r\n"
+        sftp.pty.emit 'data', "foo\r\n"
+        sftp.pty.emit 'data', "bar\r\nbaz"
+        sftp.pty.emit 'data', "\r\nqux\r\nsftp> "
         expect(cbSpy).to.have.been.calledOnce
+        expect(cbSpy).to.have.been.calledWith '''
+          ls -l
+          foo
+          bar
+          baz
+          qux
+        ''' + "\nsftp> "
         expect(sftp.queue.dequeue).to.have.been.calledOnce
 
       it 'writes the command to @pty', ->
         expect(sftp.pty.write).to.have.been.calledWith "ls -l\n"
+
+  describe '.escape', ->
+    context 'when given a string', ->
+      it 'replaces single quotes with single quotes surrounded by double quotes surrounded by single quotes and encloses the entire string in single quotes', ->
+        expect(SFTP.escape "3'o clock at harry's").to.equal "'3'\"'\"'o clock at harry'\"'\"'s'"
+
+    context 'when given a non-string object', ->
+      it 'returns null', ->
+        expect(SFTP.escape()).to.be.null
+        expect(SFTP.escape null).to.be.null
+        expect(SFTP.escape undefined).to.be.null
+        expect(SFTP.escape true).to.be.null
+        expect(SFTP.escape 123).to.be.null
+        expect(SFTP.escape {}).to.be.null
+
+  describe '#ls', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub sftp, 'runCommand'
+
+    it 'calls runCommand with ls command', ->
+      sftp.ls 'path/to/dir', cbSpy
+      expect(sftp.runCommand).to.have.been.calledWith "ls -l 'path/to/dir'"
+
+    context 'when runCommand succeeds', ->
+      beforeEach ->
+        output = '''
+          ls -l 'path/to/dir'
+          -rw-rw-r--    1 ubuntu   ubuntu         63 Oct  2 07:10 Makefile
+          -rw-rw-r--    1 ubuntu   ubuntu       1315 Oct  2 09:14 README.md
+          -rw-rw-r--    1 ubuntu   ubuntu         67 Oct  2 08:03 index.js
+          drwxrwxr-x    2 ubuntu   ubuntu       4096 Oct  3 04:22 lib
+          drwxrwxr-x   12 ubuntu   ubuntu       4096 Oct  2 08:08 node_modules
+          -rw-rw-r--    1 ubuntu   ubuntu        615 Oct  2 07:10 package.json
+          drwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test
+          -rwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test file
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'parses the output and generates an array of directories and files', (done) ->
+        sftp.ls 'path/to/dir', (err, data) ->
+          expect(err).not.to.exist
+          expect(data).to.deep.equal [
+            [ 'Makefile',    false ]
+            [ 'README.md',   false ]
+            [ 'index.js',    false ]
+            [ 'lib',         true  ]
+            [ 'node_modules',true  ]
+            [ 'package.json',false ]
+            [ 'test',        true  ]
+            [ 'test file',   false ]
+          ]
+          done()
+

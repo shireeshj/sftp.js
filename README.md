@@ -21,10 +21,12 @@ sftp.bye(function (err) {
 
 sftp.ls('path/to/heaven', function(err, list:Array) {
   /* list:
-     [ { n: 'foo', d: false },  // n: name,  d: directory
-       { n: 'bar', d: true },
-       { n: 'baz', d: false }
-       { n: 'qux', d: false } ]
+     [
+       [ 'foo', false ]  // [ name, isDirectory ]
+     , [ 'bar', true  ]
+     , [ 'baz', false ]
+     , [ 'qux', false ]
+     ]
   */
 });
 
