@@ -387,3 +387,55 @@ describe 'SFTP', ->
           '''
           done()
 
+  describe '#rmdir', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub sftp, 'runCommand'
+
+    it 'calls runCommand with rmdir command', ->
+      sftp.rmdir 'tmp', cbSpy
+      expect(sftp.runCommand).to.have.been.calledWith 'rmdir tmp'
+
+    context 'when runCommand succeeds', ->
+      beforeEach ->
+        output = '''
+          rmdir tmp
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns no errors', (done) ->
+        sftp.rmdir 'tmp', (err) ->
+          expect(err).not.to.exist
+          done()
+
+    context 'when runCommand fails with bad path', ->
+      beforeEach ->
+        output = '''
+          rmdir tmp/bin
+          Couldn't remove directory: No such file or directory
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.rmdir 'tmp/bin', (err) ->
+          expect(err).to.equal 'Couldn\'t remove directory: No such file or directory'
+          done()
+
+    context 'when there are some other types of error', ->
+      beforeEach ->
+        output = '''
+          rmdir tmp/bin
+          some random
+          error message
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.rmdir 'tmp/bin', (err) ->
+          expect(err).to.equal '''
+            some random
+            error message
+          '''
+          done()

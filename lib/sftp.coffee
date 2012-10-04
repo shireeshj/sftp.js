@@ -102,3 +102,12 @@ module.exports = class SFTP
         lines.pop()
         callback lines.join "\n"
 
+  rmdir: (dirPath, callback) ->
+    this.runCommand "rmdir #{dirPath}", (data) ->
+      lines = data.split "\n"
+      if lines.length == 2
+        callback null
+      else
+        lines.shift()
+        lines.pop()
+        callback lines.join "\n"
