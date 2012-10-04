@@ -370,3 +370,20 @@ describe 'SFTP', ->
           expect(err).to.equal 'Couldn\'t create directory: Failure'
           done()
 
+    context 'when there are some other types of error', ->
+      beforeEach ->
+        output = '''
+          mkdir tmp/bin
+          some random
+          error message
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.mkdir 'tmp/bin', (err) ->
+          expect(err).to.equal '''
+            some random
+            error message
+          '''
+          done()
+

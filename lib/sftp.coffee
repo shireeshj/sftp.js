@@ -68,14 +68,6 @@ module.exports = class SFTP
       @pty.on 'data', dataListener
       @pty.write command + "\n"
 
-  mkdir: (dirPath, callback) ->
-    this.runCommand "mkdir #{dirPath}", (data) ->
-      lines = data.split "\n"
-      if lines.length == 2
-        callback null
-      else
-        callback lines[1]
-
   @escape: (string) ->
     if typeof string == 'string'
       return "'" + string.replace(/'/g, "'\"'\"'") + "'"
@@ -99,4 +91,14 @@ module.exports = class SFTP
           errors.push line
       errors = errors.join '\n' if errors
       callback errors, files
+
+  mkdir: (dirPath, callback) ->
+    this.runCommand "mkdir #{dirPath}", (data) ->
+      lines = data.split "\n"
+      if lines.length == 2
+        callback null
+      else
+        lines.shift()
+        lines.pop()
+        callback lines.join "\n"
 
