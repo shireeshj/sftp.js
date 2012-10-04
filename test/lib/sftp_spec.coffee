@@ -370,7 +370,7 @@ describe 'SFTP', ->
 
     it 'calls runCommand with mkdir command', ->
       sftp.mkdir 'tmp', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith 'mkdir tmp'
+      expect(sftp.runCommand).to.have.been.calledWith "mkdir 'tmp'"
 
     context 'when runCommand succeeds', ->
       beforeEach ->
@@ -436,7 +436,7 @@ describe 'SFTP', ->
 
     it 'calls runCommand with rmdir command', ->
       sftp.rmdir 'tmp', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith 'rmdir tmp'
+      expect(sftp.runCommand).to.have.been.calledWith "rmdir 'tmp'"
 
     context 'when runCommand succeeds', ->
       beforeEach ->
@@ -494,7 +494,7 @@ describe 'SFTP', ->
 
     it 'calls runCommand with get command', ->
       sftp.get 'path/to/remote-file', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith 'get path/to/remote-file /tmp/action'
+      expect(sftp.runCommand).to.have.been.calledWith "get 'path/to/remote-file' '/tmp/action'"
 
     context 'when runCommand succeeds', ->
       beforeEach ->
@@ -661,7 +661,7 @@ describe 'SFTP', ->
 
     it 'calls runCommand with rm command', ->
       sftp.rm 'remote-file', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith 'rm remote-file'
+      expect(sftp.runCommand).to.have.been.calledWith "rm 'remote-file'"
 
     context 'when runCommand succeeds', ->
       beforeEach ->

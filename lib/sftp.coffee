@@ -105,7 +105,7 @@ module.exports = class SFTP
       callback errors, files
 
   mkdir: (dirPath, callback) ->
-    this.runCommand "mkdir #{dirPath}", (data) ->
+    this.runCommand "mkdir #{@constructor.escape dirPath}", (data) ->
       lines = data.split "\n"
       if lines.length == 2
         callback null
@@ -115,7 +115,7 @@ module.exports = class SFTP
         callback lines.join "\n"
 
   rmdir: (dirPath, callback) ->
-    this.runCommand "rmdir #{dirPath}", (data) ->
+    this.runCommand "rmdir #{@constructor.escape dirPath}", (data) ->
       lines = data.split "\n"
       if lines.length == 2
         callback null
@@ -126,7 +126,7 @@ module.exports = class SFTP
 
   get: (filePath, callback) ->
     tmp.dir (err, tmpDirPath) =>
-      this.runCommand "get #{filePath} #{tmpDirPath}", (data) ->
+      this.runCommand "get #{@constructor.escape filePath} #{@constructor.escape tmpDirPath}", (data) ->
         lines = data.split "\n"
         if lines.length != 3
           lines.shift()
@@ -161,7 +161,7 @@ module.exports = class SFTP
             callback lines.join "\n"
 
   rm: (filePath, callback) ->
-    this.runCommand "rm #{filePath}", (data) ->
+    this.runCommand "rm #{@constructor.escape filePath}", (data) ->
       lines = data.split "\n"
       if lines.length == 3 && lines[2] == 'sftp> ' && /^Removing\s/.test lines[1]
         callback null
