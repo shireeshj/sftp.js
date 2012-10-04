@@ -161,7 +161,7 @@ module.exports = class SFTP
   rm: (filePath, callback) ->
     this.runCommand "rm #{filePath}", (data) ->
       lines = data.split "\n"
-      if lines.length == 3
+      if lines.length == 3 && lines[2] == 'sftp> ' && /^Removing\s/.test lines[1]
         callback null
       else
         lines.shift()

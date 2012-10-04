@@ -708,6 +708,21 @@ describe 'SFTP', ->
           '''
           done()
 
+    context 'when runCommand fails with bad path', ->
+      beforeEach ->
+        output = '''
+          rm unknown-file
+          Failed to remove /home/foo/unknown-file
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.rm 'unknow-file', (err) ->
+          expect(err).to.equal '''
+            Failed to remove /home/foo/unknown-file
+          '''
+          done()
+
     context 'when there are some other types of error', ->
       beforeEach ->
         output = '''
