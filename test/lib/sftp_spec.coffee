@@ -463,10 +463,12 @@ describe 'SFTP', ->
           Fetching /home/foo/path/to/remote-file to remote-file
         ''' + '\nsftp> '
         sinon.stub fs, 'readFile'
+        sinon.stub fs, 'unlinkSync'
         sftp.runCommand.callsArgWith 1, output
 
       afterEach ->
         fs.readFile.restore()
+        fs.unlinkSync.restore()
 
       context 'when readFile succeeds', ->
         beforeEach ->

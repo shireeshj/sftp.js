@@ -128,8 +128,8 @@ module.exports = class SFTP
             if err
               callback err, null
             else
-              fileBuffer = new Buffer(data)
-              callback null, fileBuffer
+              fs.unlinkSync tmpfilePath
+              callback null, data
 
   put: (filePath, callback) ->
     this.runCommand "put #{filePath}", (data) ->
