@@ -27,9 +27,9 @@ describe 'SFTP', ->
     context 'when temp file failed to get created', ->
       beforeEach ->
         err = new Error
-        sinon.stub tmp, 'file', (cb) ->
-          cb(err)
         cbSpy = sinon.spy()
+        sinon.stub tmp, 'file'
+        tmp.file.callsArgWith 0, err
         sftp.writeKeyFile cbSpy
 
       afterEach ->
@@ -41,26 +41,27 @@ describe 'SFTP', ->
     context 'when temp file is successfully created', ->
       beforeEach ->
         err = new Error
-        sinon.stub tmp, 'file', (cb) ->
-          cb null, '/tmp/tmpfile'
-        sinon.stub fs, 'unlink', (path, cb) ->
-          cb()
+        sinon.stub tmp, 'file'
+        sinon.stub fs, 'writeFile'
+        sinon.stub fs, 'unlink'
+        tmp.file.callsArgWith 0, null, '/tmp/tmpfile'
+        fs.unlink.callsArg 1
 
       afterEach ->
         tmp.file.restore()
+        fs.writeFile.restore()
         fs.unlink.restore()
+
+      it 'writes the key to the temp file', ->
+        sftp.writeKeyFile cbSpy
+        expect(fs.writeFile).to.have.been.calledWith '/tmp/tmpfile'
+        expect(fs.writeFile.args[0][1].toString 'utf8').to.equal sftp.key
 
       context 'when the key failed to be written to the temp file', ->
         beforeEach ->
-          sinon.stub fs, 'writeFile', (path, buffer, cb) ->
-            expect(path).to.equal '/tmp/tmpfile'
-            expect(buffer.toString 'utf8').to.equal sftp.key
-            cb(err)
+          fs.writeFile.callsArgWith 2, err
           cbSpy = sinon.spy()
           sftp.writeKeyFile cbSpy
-
-        afterEach ->
-          fs.writeFile.restore()
 
         it 'deletes the temp file', ->
           expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
@@ -70,15 +71,9 @@ describe 'SFTP', ->
 
       context 'when the key is successfully written to the temp file', ->
         beforeEach ->
-          sinon.stub fs, 'writeFile', (path, buffer, cb) ->
-            expect(path).to.equal '/tmp/tmpfile'
-            expect(buffer.toString 'utf8').to.equal sftp.key
-            cb()
+          fs.writeFile.callsArg 2
           cbSpy = sinon.spy()
           sftp.writeKeyFile cbSpy
-
-        afterEach ->
-          fs.writeFile.restore()
 
         it 'makes a callback with ssh arguments as the first argument', ->
           expect(cbSpy).to.have.been.called
