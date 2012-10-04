@@ -56,9 +56,19 @@ module.exports = class SFTP
       callback null
 
   onPTYClose: (hadError) ->
+    this.destroy()
+
+  destroy: (callback) ->
+    @queue.enqueue =>
+      @pty.removeAllListeners()
+      @pty.write "bye\n"
+      @pty.destroy()
+      delete @queue
+      delete @pty
+      callback()
 
   runCommand: (command, callback) ->
-    @queue.enqueue =>
+    @queue?.enqueue =>
       buffer = []
       dataListener = (data) =>
         data = data.replace /\r/g, ''

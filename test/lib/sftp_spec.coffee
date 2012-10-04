@@ -1,4 +1,5 @@
 SFTP = require '../../lib/sftp'
+_ = require 'underscore'
 fs = require 'fs'
 tmp = require 'tmp'
 pty = require 'pty.js'
@@ -188,6 +189,46 @@ describe 'SFTP', ->
               mockPty.emit 'close'
               expect(sftp.onPTYClose).to.have.been.called
 
+  describe '#destroy', ->
+    cbSpy = mockPty = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      mockPty = sftp.pty = new EventEmitter
+      sinon.stub mockPty, 'removeAllListeners'
+      _.extend mockPty,
+        write: ->
+        destroy: ->
+      sinon.stub mockPty, 'write'
+      sinon.stub mockPty, 'destroy'
+      sinon.stub sftp.queue, 'enqueue'
+      sftp.queue.enqueue.callsArg 0
+      sftp.destroy cbSpy
+
+    it 'removes all listeners on pty', ->
+      expect(mockPty.removeAllListeners).to.have.been.called
+
+    it 'writes "bye" command to pty', ->
+      expect(mockPty.write).to.have.been.calledWith "bye\n"
+
+    it 'calls #destroy on pty', ->
+      expect(mockPty.destroy).to.have.been.called
+
+    it 'deletes the queue and pty', ->
+      expect(sftp.queue).not.to.exist
+      expect(sftp.pty).not.to.exist
+
+    it 'calls callback', ->
+      expect(cbSpy).to.have.been.called
+
+  describe 'onPTYClose', ->
+    beforeEach ->
+      sinon.stub sftp, 'destroy'
+      sftp.onPTYClose()
+
+    it 'calls #destroy', ->
+      expect(sftp.destroy).to.have.been.called
+
   describe '#runCommand', ->
     cbSpy = null
 
@@ -200,8 +241,17 @@ describe 'SFTP', ->
       sftp.runCommand 'ls', cbSpy
       expect(sftp.queue.items).to.have.length 1
 
+    context 'when the command queue is deleted', ->
+      beforeEach ->
+        delete sftp.queue
+
+      it 'does nothing', ->
+        sftp.runCommand 'ls', cbSpy
+
     describe 'the enqueued function', ->
       beforeEach ->
+        sinon.stub sftp.queue, 'enqueue'
+        sftp.queue.enqueue.callsArg 0
         sinon.stub sftp.queue, 'dequeue'
         sinon.stub sftp.pty, 'write'
         sftp.runCommand 'ls -l', cbSpy
