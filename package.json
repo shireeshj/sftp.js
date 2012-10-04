@@ -1,6 +1,6 @@
 {
-  "name": "action-sftp"
-, "description": "sftp library for node"
+  "name": "sftp.js"
+, "description": "simple sftp library for node"
 , "author": "Action.IO"
 , "version": "0.0.1"
 , "private": true
