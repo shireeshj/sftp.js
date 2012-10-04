@@ -31,6 +31,7 @@ module.exports = class SFTP
           '-o', 'PasswordAuthentication=no'
           '-o', 'LogLevel=FATAL'
           '-P', "#{@port}"
+          '-q'
           "#{@user}@#{@host}"
         ]
         deleteKeyFile = (callback) ->
