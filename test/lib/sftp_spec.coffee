@@ -39,13 +39,10 @@ describe 'SFTP', ->
         expect(cbSpy).to.have.been.calledWith err
 
     context 'when temp file is successfully created', ->
-      fakeFd = null
-
       beforeEach ->
         err = new Error
-        fakeFd = {}
         sinon.stub tmp, 'file', (cb) ->
-          cb null, '/tmp/tmpfile', fakeFd
+          cb null, '/tmp/tmpfile'
         sinon.stub fs, 'unlink', (path, cb) ->
           cb()
 
@@ -55,15 +52,15 @@ describe 'SFTP', ->
 
       context 'when the key failed to be written to the temp file', ->
         beforeEach ->
-          fs.write = sinon.stub fs, 'write', (fd, buf, offset, len, pos, cb) ->
-            expect(fd).to.equal fakeFd
-            cb err
+          sinon.stub fs, 'writeFile', (path, buffer, cb) ->
+            expect(path).to.equal '/tmp/tmpfile'
+            expect(buffer.toString 'utf8').to.equal sftp.key
+            cb(err)
           cbSpy = sinon.spy()
           sftp.writeKeyFile cbSpy
-          expect(fs.write).to.have.been.called
 
         afterEach ->
-          fs.write.restore()
+          fs.writeFile.restore()
 
         it 'deletes the temp file', ->
           expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
@@ -73,15 +70,15 @@ describe 'SFTP', ->
 
       context 'when the key is successfully written to the temp file', ->
         beforeEach ->
-          fs.write = sinon.stub fs, 'write', (fd, buf, offset, len, pos, cb) ->
-            expect(fd).to.equal fakeFd
+          sinon.stub fs, 'writeFile', (path, buffer, cb) ->
+            expect(path).to.equal '/tmp/tmpfile'
+            expect(buffer.toString 'utf8').to.equal sftp.key
             cb()
           cbSpy = sinon.spy()
           sftp.writeKeyFile cbSpy
-          expect(fs.write).to.have.been.called
 
         afterEach ->
-          fs.write.restore()
+          fs.writeFile.restore()
 
         it 'makes a callback with ssh arguments as the first argument', ->
           expect(cbSpy).to.have.been.called

@@ -18,8 +18,8 @@ module.exports = class SFTP
       if err
         callback err
         return
-      b = new Buffer @key
-      fs.write fd, b, 0, b.length, 0, (err, written, buffer) =>
+      keyBuf = new Buffer @key
+      fs.writeFile path, keyBuf, (err, written, buffer) =>
         if err
           fs.unlink path, -> callback(err)
           return
