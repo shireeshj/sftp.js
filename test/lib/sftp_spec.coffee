@@ -287,21 +287,39 @@ describe 'SFTP', ->
           done()
 
     context 'when runCommand fails', ->
-      beforeEach ->
-        output = '''
-          ls -l '/path/to/dir'
-          Couldn't stat remote file: No such file or directory
-          Can't ls: "/home/ubuntu/path/to/dir" not found
-        ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
-
-      it 'returns an error', (done) ->
-        sftp.ls '/path/to/dir', (err, data) ->
-          expect(err).to.equal '''
+      context 'no such file or directory error', ->
+        beforeEach ->
+          output = '''
+            ls -l 'path/to/dir'
             Couldn't stat remote file: No such file or directory
             Can't ls: "/home/ubuntu/path/to/dir" not found
-          '''
-          done()
+          ''' + '\nsftp> '
+          sftp.runCommand.callsArgWith 1, output
+
+        it 'returns an error', (done) ->
+          sftp.ls '/path/to/dir', (err, data) ->
+            expect(err).to.equal '''
+              Couldn't stat remote file: No such file or directory
+              Can't ls: "/home/ubuntu/path/to/dir" not found
+            '''
+            done()
+
+      context 'other errors', ->
+        beforeEach ->
+          output = '''
+            ls -l 'path/to/dir'
+            some random
+            error message
+          ''' + '\nsftp> '
+          sftp.runCommand.callsArgWith 1, output
+
+        it 'returns an error', (done) ->
+          sftp.ls '/path/to/dir', (err, data) ->
+            expect(err).to.equal '''
+              some random
+              error message
+            '''
+            done()
 
   describe '#mkdir', ->
     cbSpy = null
@@ -351,3 +369,4 @@ describe 'SFTP', ->
         sftp.mkdir 'tmp/bin', (err) ->
           expect(err).to.equal 'Couldn\'t create directory: Failure'
           done()
+
