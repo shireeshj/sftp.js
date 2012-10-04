@@ -104,8 +104,8 @@ module.exports = class SFTP
       errors = errors.join '\n' if errors
       callback errors, files
 
-  mkdir: (dirPath, callback) ->
-    this.runCommand "mkdir #{@constructor.escape dirPath}", (data) ->
+  doBlankResponseCmd: (command, dirPath, callback) ->
+    this.runCommand "#{command} #{@constructor.escape dirPath}", (data) ->
       lines = data.split "\n"
       if lines.length == 2
         callback null
@@ -114,15 +114,11 @@ module.exports = class SFTP
         lines.pop()
         callback lines.join "\n"
 
+  mkdir: (dirPath, callback) ->
+    this.doBlankResponseCmd 'mkdir', dirPath, callback
+
   rmdir: (dirPath, callback) ->
-    this.runCommand "rmdir #{@constructor.escape dirPath}", (data) ->
-      lines = data.split "\n"
-      if lines.length == 2
-        callback null
-      else
-        lines.shift()
-        lines.pop()
-        callback lines.join "\n"
+    this.doBlankResponseCmd 'rmdir', dirPath, callback
 
   get: (filePath, callback) ->
     tmp.dir (err, tmpDirPath) =>
