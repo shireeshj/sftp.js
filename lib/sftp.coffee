@@ -1,5 +1,6 @@
 _ = require 'underscore'
 fs = require 'fs'
+path = require 'path'
 tmp = require 'tmp'
 pty = require 'pty.js'
 CommandQueue = require './command_queue'
@@ -70,7 +71,7 @@ module.exports = class SFTP
 
   @escape: (string) ->
     if typeof string == 'string'
-      return "'" + string.replace(/'/g, "'\"'\"'") + "'"
+      return "'" + string.replace(/\'/g, "'\"'\"'") + "'"
     null
 
   ls: (filePath, callback) ->
@@ -111,3 +112,20 @@ module.exports = class SFTP
         lines.shift()
         lines.pop()
         callback lines.join "\n"
+
+  get: (filePath, callback) ->
+    tmp.dir (err, tmpdirPath) =>
+      this.runCommand "get #{filePath} #{tmpdirPath}", (data) ->
+        lines = data.split "\n"
+        if lines.length != 3
+          lines.shift()
+          lines.pop()
+          callback lines.join "\n"
+        else
+          tmpfilePath = "#{tmpdirPath}/#{path.basename(filePath)}"
+          fs.readFile tmpfilePath, (err, data) ->
+            if err
+              callback err, null
+            else
+              fileBuffer = new Buffer(data)
+              callback null, fileBuffer

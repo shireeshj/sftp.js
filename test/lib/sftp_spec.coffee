@@ -439,3 +439,88 @@ describe 'SFTP', ->
             error message
           '''
           done()
+
+  describe '#get', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub sftp, 'runCommand'
+      sinon.stub tmp, 'dir'
+      tmp.dir.callsArgWith 0, null, '/tmp/action'
+
+    afterEach ->
+      tmp.dir.restore()
+
+    it 'calls runCommand with get command', ->
+      sftp.get 'path/to/remote-file', cbSpy
+      expect(sftp.runCommand).to.have.been.calledWith 'get path/to/remote-file /tmp/action'
+
+    context 'when runCommand succeeds', ->
+      beforeEach ->
+        output = '''
+          get path/to/remote-file
+          Fetching /home/foo/path/to/remote-file to remote-file
+        ''' + '\nsftp> '
+        sinon.stub fs, 'readFile'
+        sftp.runCommand.callsArgWith 1, output
+
+      afterEach ->
+        fs.readFile.restore()
+
+      context 'when readFile succeeds', ->
+        beforeEach ->
+          fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
+
+        it 'returns no errors', (done) ->
+          sftp.get 'path/to/remote-file', (err, data) ->
+            expect(err).not.to.exist
+            expect(data).to.be.an.instanceOf Buffer
+            expect(data.toString 'utf8').to.equal 'some file content'
+            done()
+
+      context 'when readFile fails with error', ->
+        beforeEach ->
+          fs.readFile.callsArgWith 1, new Error 'some error'
+
+        it 'returns error', (done) ->
+          sftp.get 'path/to/remote-file', (err, data) ->
+            expect(err.toString()).to.contain 'some error'
+            expect(err.data).not.to.exist
+            done()
+
+    context 'when runCommand fails with bad path', ->
+      beforeEach ->
+        output = '''
+          get path/to/remote-file
+          Couldn't stat remote file: No such file or directory
+          File "/home/ubuntu/remote-file" not found
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.get 'path/to/remote-file', (err, data) ->
+          expect(err).to.equal '''
+            Couldn\'t stat remote file: No such file or directory
+            File "/home/ubuntu/remote-file" not found
+          '''
+          done()
+
+    context 'when there are some other types of error', ->
+      beforeEach ->
+        output = '''
+          get path/to/remote-file /tmp/action
+          some random
+          error message
+          which spans more than 2 lines
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.get 'path/to/remote-file', (err) ->
+          expect(err).to.equal '''
+            some random
+            error message
+            which spans more than 2 lines
+          '''
+          done()
