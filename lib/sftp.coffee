@@ -130,3 +130,13 @@ module.exports = class SFTP
             else
               fileBuffer = new Buffer(data)
               callback null, fileBuffer
+
+  put: (filePath, callback) ->
+    this.runCommand "put #{filePath}", (data) ->
+      lines = data.split "\n"
+      lines.shift()
+      lines.pop()
+      if /^Uploading\s/.test lines[0]
+        callback null
+      else
+        callback lines.join "\n"

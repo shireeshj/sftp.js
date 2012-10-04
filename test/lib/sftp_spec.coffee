@@ -524,3 +524,57 @@ describe 'SFTP', ->
             which spans more than 2 lines
           '''
           done()
+
+  describe '#put', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub sftp, 'runCommand'
+
+    it 'calls runCommand with put command', ->
+      sftp.put 'local-file', cbSpy
+      expect(sftp.runCommand).to.have.been.calledWith 'put local-file'
+
+    context 'when runCommand succeeds', ->
+      beforeEach ->
+        output = '''
+          put local-file
+          Uploading local-file to /home/foo/local-file
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns no errors', (done) ->
+        sftp.put 'local-file', (err) ->
+          expect(err).not.to.exist
+          done()
+
+    context 'when runCommand fails with bad path', ->
+      beforeEach ->
+        output = '''
+          put unknown-file
+          stat unknown-file: No such file or directory
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.put 'unknow-file', (err) ->
+          expect(err).to.equal 'stat unknown-file: No such file or directory'
+          done()
+
+    context 'when there are some other types of error', ->
+      beforeEach ->
+        output = '''
+          put local-file
+          some random
+          error message
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.put 'local-file', (err) ->
+          expect(err).to.equal '''
+            some random
+            error message
+          '''
+          done()
