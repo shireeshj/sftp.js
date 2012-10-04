@@ -583,16 +583,16 @@ describe 'SFTP', ->
     beforeEach ->
       cbSpy = sinon.spy()
       sinon.stub sftp, 'runCommand'
-      sinon.stub tmp, 'dir'
+      sinon.stub tmp, 'file'
       sinon.stub fs, 'writeFile'
       sinon.stub fs, 'unlink'
-      tmp.dir.callsArgWith 0, null, '/tmp/action'
+      tmp.file.callsArgWith 0, null, '/tmp/action/tempfile'
       fs.writeFile.callsArgWith 2, null
 
     afterEach ->
       fs.writeFile.restore()
       fs.unlink.restore()
-      tmp.dir.restore()
+      tmp.file.restore()
 
     it 'calls runCommand with put command', ->
       sftp.put '/path/to/remote-file', new Buffer('some text'), cbSpy
@@ -739,3 +739,4 @@ describe 'SFTP', ->
             error message
           '''
           done()
+

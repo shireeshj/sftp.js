@@ -142,8 +142,7 @@ module.exports = class SFTP
               callback null, data
 
   put: (remoteFilePath, fileBuffer, callback) ->
-    tmp.dir (err, tmpDirPath) =>
-      tmpFilePath = "#{tmpDirPath}/tempfile"
+    tmp.file (err, tmpFilePath) =>
       fs.writeFile tmpFilePath, fileBuffer, (err) =>
         if err
           callback err
@@ -167,3 +166,4 @@ module.exports = class SFTP
         lines.shift()
         lines.pop()
         callback lines.join "\n"
+
