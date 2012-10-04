@@ -13,7 +13,7 @@
   , "pty.js"             : "0.1.x"
   }
 , "devDependencies": {
-    "mocha"        : "1.5.x"
+    "mocha"        : "1.6.x"
   , "sinon"        : "1.4.x"
   , "chai"         : "1.2.x"
   , "sinon-chai"   : "2.1.x"
