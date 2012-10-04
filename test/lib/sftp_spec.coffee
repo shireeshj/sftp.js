@@ -583,48 +583,82 @@ describe 'SFTP', ->
     beforeEach ->
       cbSpy = sinon.spy()
       sinon.stub sftp, 'runCommand'
+      sinon.stub tmp, 'dir'
+      sinon.stub fs, 'writeFile'
+      sinon.stub fs, 'unlink'
+      tmp.dir.callsArgWith 0, null, '/tmp/action'
+      fs.writeFile.callsArgWith 2, null
+
+    afterEach ->
+      fs.writeFile.restore()
+      fs.unlink.restore()
+      tmp.dir.restore()
 
     it 'calls runCommand with put command', ->
-      sftp.put 'local-file', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith 'put local-file'
+      sftp.put '/path/to/remote-file', new Buffer('some text'), cbSpy
+      expect(sftp.runCommand).to.have.been.calledWith 'put /tmp/action/tempfile /path/to/remote-file'
 
     context 'when runCommand succeeds', ->
       beforeEach ->
         output = '''
-          put local-file
-          Uploading local-file to /home/foo/local-file
+          put /tmp/action/tempfile /path/to/remote-file
+          Uploading tempfile to /path/to/remote-file
         ''' + '\nsftp> '
         sftp.runCommand.callsArgWith 1, output
 
       it 'returns no errors', (done) ->
-        sftp.put 'local-file', (err) ->
+        sftp.put '/path/to/remote-file', new Buffer('some text'), (err) ->
           expect(err).not.to.exist
+          done()
+
+    context 'when writeFile succeeds', ->
+      beforeEach ->
+        output = '''
+          put /tmp/action/tempfile /path/to/remote-file
+          Uploading tempfile to /path/to/remote-file
+        ''' + '\nsftp> '
+        fs.writeFile.callsArgWith 2, null
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns no errors', (done) ->
+        sftp.put 'path/to/remotedir', new Buffer('some text'), (err) ->
+          expect(err).not.to.exist
+          expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
+          done()
+
+    context 'when writeFile fails with error', ->
+      beforeEach ->
+        fs.writeFile.callsArgWith 2, new Error 'some error'
+
+      it 'returns error', (done) ->
+        sftp.put 'path/to/remote-file', new Buffer('some text'), (err) ->
+          expect(err.toString()).to.contain 'some error'
           done()
 
     context 'when runCommand fails with bad path', ->
       beforeEach ->
         output = '''
-          put unknown-file
-          stat unknown-file: No such file or directory
+          put /tmp/action/tempfile /bad/path
+          stat tempfile: No such file or directory
         ''' + '\nsftp> '
         sftp.runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
-        sftp.put 'unknow-file', (err) ->
-          expect(err).to.equal 'stat unknown-file: No such file or directory'
+        sftp.put '/bad/path', new Buffer('some text'), (err) ->
+          expect(err).to.equal 'stat tempfile: No such file or directory'
           done()
 
     context 'when there are some other types of error', ->
       beforeEach ->
         output = '''
-          put local-file
+          put /tmp/action/tempfile /bad/path
           some random
           error message
         ''' + '\nsftp> '
         sftp.runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
-        sftp.put 'local-file', (err) ->
+        sftp.put '/bad/path', new Buffer('some text'), (err) ->
           expect(err).to.equal '''
             some random
             error message

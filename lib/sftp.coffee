@@ -141,15 +141,22 @@ module.exports = class SFTP
             else
               callback null, data
 
-  put: (filePath, callback) ->
-    this.runCommand "put #{filePath}", (data) ->
-      lines = data.split "\n"
-      lines.shift()
-      lines.pop()
-      if /^Uploading\s/.test lines[0]
-        callback null
-      else
-        callback lines.join "\n"
+  put: (remoteFilePath, fileBuffer, callback) ->
+    tmp.dir (err, tmpDirPath) =>
+      tmpFilePath = "#{tmpDirPath}/tempfile"
+      fs.writeFile tmpFilePath, fileBuffer, (err) =>
+        if err
+          callback err
+        else
+          this.runCommand "put #{tmpFilePath} #{remoteFilePath}", (data) ->
+            lines = data.split "\n"
+            lines.shift()
+            lines.pop()
+            fs.unlink tmpFilePath
+            if /^Uploading\s/.test lines[0]
+              callback null
+            else
+              callback lines.join "\n"
 
   rm: (filePath, callback) ->
     this.runCommand "rm #{filePath}", (data) ->
