@@ -65,8 +65,7 @@ describe 'SFTP', ->
           fs.write.restore()
 
         it 'deletes the temp file', ->
-          expect(fs.unlink).to.have.been.called
-          expect(fs.unlink.args[0][0]).to.equal '/tmp/tmpfile'
+          expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
 
         it 'makes a callback with the error', ->
           expect(cbSpy).to.have.been.calledWith err
@@ -93,6 +92,7 @@ describe 'SFTP', ->
           expect(sshArgs).to.match /-o PasswordAuthentication=no/
           expect(sshArgs).to.match /-o LogLevel=FATAL/
           expect(sshArgs).to.match /-P 2222/
+          expect(sshArgs).to.match /-q/
           expect(sshArgs).to.match /peter@localhost/
 
         describe 'deleteKeyFile function', ->
@@ -100,16 +100,14 @@ describe 'SFTP', ->
             it 'deletes the temp key file and then calls the callback', (done) ->
               expect(cbSpy).to.have.been.called
               cbSpy.args[0][2] ->
-                expect(fs.unlink).to.have.been.called
-                expect(fs.unlink.args[0][0]).to.equal '/tmp/tmpfile'
+                expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
                 done()
 
           context 'without a callback', ->
             it 'deletes the temp key file', ->
               expect(cbSpy).to.have.been.called
               cbSpy.args[0][2]()
-              expect(fs.unlink).to.have.been.called
-              expect(fs.unlink.args[0][0]).to.equal '/tmp/tmpfile'
+              expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
 
   describe '#connect', ->
     err = cbSpy = null
@@ -463,12 +461,12 @@ describe 'SFTP', ->
           Fetching /home/foo/path/to/remote-file to remote-file
         ''' + '\nsftp> '
         sinon.stub fs, 'readFile'
-        sinon.stub fs, 'unlinkSync'
+        sinon.stub fs, 'unlink'
         sftp.runCommand.callsArgWith 1, output
 
       afterEach ->
         fs.readFile.restore()
-        fs.unlinkSync.restore()
+        fs.unlink.restore()
 
       context 'when readFile succeeds', ->
         beforeEach ->
@@ -479,6 +477,7 @@ describe 'SFTP', ->
             expect(err).not.to.exist
             expect(data).to.be.an.instanceOf Buffer
             expect(data.toString 'utf8').to.equal 'some file content'
+            expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
             done()
 
       context 'when readFile fails with error', ->
@@ -489,6 +488,7 @@ describe 'SFTP', ->
           sftp.get 'path/to/remote-file', (err, data) ->
             expect(err.toString()).to.contain 'some error'
             expect(err.data).not.to.exist
+            expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
             done()
 
     context 'when runCommand fails with bad path', ->
@@ -580,3 +580,4 @@ describe 'SFTP', ->
             error message
           '''
           done()
+

@@ -115,20 +115,20 @@ module.exports = class SFTP
         callback lines.join "\n"
 
   get: (filePath, callback) ->
-    tmp.dir (err, tmpdirPath) =>
-      this.runCommand "get #{filePath} #{tmpdirPath}", (data) ->
+    tmp.dir (err, tmpDirPath) =>
+      this.runCommand "get #{filePath} #{tmpDirPath}", (data) ->
         lines = data.split "\n"
         if lines.length != 3
           lines.shift()
           lines.pop()
           callback lines.join "\n"
         else
-          tmpfilePath = "#{tmpdirPath}/#{path.basename(filePath)}"
-          fs.readFile tmpfilePath, (err, data) ->
+          tmpFilePath = "#{tmpDirPath}/#{path.basename filePath}"
+          fs.readFile tmpFilePath, (err, data) ->
+            fs.unlink tmpFilePath
             if err
               callback err, null
             else
-              fs.unlinkSync tmpfilePath
               callback null, data
 
   put: (filePath, callback) ->
@@ -140,3 +140,4 @@ module.exports = class SFTP
         callback null
       else
         callback lines.join "\n"
+
