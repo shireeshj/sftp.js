@@ -141,3 +141,12 @@ module.exports = class SFTP
       else
         callback lines.join "\n"
 
+  rm: (filePath, callback) ->
+    this.runCommand "rm #{filePath}", (data) ->
+      lines = data.split "\n"
+      if lines.length == 3
+        callback null
+      else
+        lines.shift()
+        lines.pop()
+        callback lines.join "\n"

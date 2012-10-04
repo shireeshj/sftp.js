@@ -581,3 +581,62 @@ describe 'SFTP', ->
           '''
           done()
 
+  describe '#rm', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub sftp, 'runCommand'
+
+    it 'calls runCommand with rm command', ->
+      sftp.rm 'remote-file', cbSpy
+      expect(sftp.runCommand).to.have.been.calledWith 'rm remote-file'
+
+    context 'when runCommand succeeds', ->
+      beforeEach ->
+        output = '''
+          rm remote-file
+          Removing remote-file
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns no errors', (done) ->
+        sftp.rm 'remote-file', (err) ->
+          expect(err).not.to.exist
+          done()
+
+    context 'when runCommand fails with bad path', ->
+      beforeEach ->
+        output = '''
+          rm unknown-file
+          Couldn't stat remote file: No such file or directory
+          Removing /home/foo/unknown-file
+          Couldn't delete file: No such file or directory
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.rm 'unknow-file', (err) ->
+          expect(err).to.equal '''
+            Couldn't stat remote file: No such file or directory
+            Removing /home/foo/unknown-file
+            Couldn't delete file: No such file or directory
+          '''
+          done()
+
+    context 'when there are some other types of error', ->
+      beforeEach ->
+        output = '''
+          rm remote-file
+          some random
+          error message
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.rm 'remote-file', (err) ->
+          expect(err).to.equal '''
+            some random
+            error message
+          '''
+          done()
