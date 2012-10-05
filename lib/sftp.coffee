@@ -43,18 +43,18 @@ module.exports = class SFTP
   connect: (callback) -> # callback(err)
     this.writeKeyFile (err, sshArgs, deleteKeyFile) =>
       if err
-        callback(err)
+        callback? err
         return
       try
         @pty = pty.spawn '/usr/bin/sftp', sshArgs
       catch err
         deleteKeyFile ->
-          callback err
+          callback? err
         return
       @pty.once 'data', ->
         deleteKeyFile()
       @pty.on 'close', _.bind(@onPTYClose, this)
-      callback null
+      callback?()
 
   onPTYClose: (hadError) ->
     this.destroy()
@@ -66,7 +66,7 @@ module.exports = class SFTP
       @pty.destroy()
       delete @queue
       delete @pty
-      callback()
+      callback?()
 
   runCommand: (command, callback) ->
     @queue?.enqueue =>
@@ -110,7 +110,7 @@ module.exports = class SFTP
     this.runCommand "#{command} #{@constructor.escape dirPath}", (data) ->
       lines = data.split "\n"
       if lines.length == 2
-        callback null
+        callback()
       else
         lines.shift()
         lines.pop()
@@ -135,12 +135,12 @@ module.exports = class SFTP
           childProcess.exec "file #{tmpFilePath}", (err, fileType) ->
             if err
               fs.unlink tmpFilePath
-              callback err, null, null
+              callback err
             else
               fs.readFile tmpFilePath, (err, data) ->
                 fs.unlink tmpFilePath
                 if err
-                  callback err, null, null
+                  callback err
                 else
                   callback null, data, fileType
 
@@ -159,7 +159,7 @@ module.exports = class SFTP
           lines.pop()
           fs.unlink tmpFilePath
           if /^Uploading\s/.test lines[0]
-            callback null
+            callback()
           else
             callback lines.join "\n"
 
@@ -167,7 +167,7 @@ module.exports = class SFTP
     this.runCommand "rm #{@constructor.escape filePath}", (data) ->
       lines = data.split "\n"
       if lines.length == 3 && lines[2] == 'sftp> ' && /^Removing\s/.test lines[1]
-        callback null
+        callback()
       else
         lines.shift()
         lines.pop()

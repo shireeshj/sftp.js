@@ -166,7 +166,7 @@ describe 'SFTP', ->
           pty.spawn.restore()
 
         it 'calls callback with no error', ->
-          expect(cbSpy).to.have.been.calledWith null
+          expect(cbSpy).to.have.been.calledWith undefined
 
         describe 'pty events', ->
           context "the first time 'data' event is received", ->

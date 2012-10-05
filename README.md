@@ -40,9 +40,11 @@ sftp.rm('path/to/file', function(err) {});
 sftp.rmdir('path/to/dir', function(err) {});
 
 sftp.mkdir('path/to/new/dir', function(err) {});
-sftp.on('close', function(err) {});
 
 // to be implemented later:
+
+sftp.on('connection', function(err, sftp) {});
+sftp.on('close', function(err, sftp) {});
 
 sftp.chmod('0755', 'path/to/heaven', function(err) {});
 sftp.chown('user', 'path/to/heaven', function(err) {});
