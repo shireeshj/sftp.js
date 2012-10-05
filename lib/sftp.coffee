@@ -3,6 +3,7 @@ fs = require 'fs'
 path = require 'path'
 tmp = require 'tmp'
 pty = require 'pty.js'
+childProcess = require 'child_process'
 CommandQueue = require './command_queue'
 
 module.exports = class SFTP
@@ -131,12 +132,17 @@ module.exports = class SFTP
           callback lines.join "\n"
         else
           tmpFilePath = "#{tmpDirPath}/#{path.basename filePath}"
-          fs.readFile tmpFilePath, (err, data) ->
+          childProcess.exec "file #{tmpFilePath}", (err, fileType) ->
             fs.unlink tmpFilePath
             if err
-              callback err, null
+              callback err, null, null
             else
-              callback null, data
+              fs.readFile tmpFilePath, (err, data) ->
+                fs.unlink tmpFilePath
+                if err
+                  callback err, null, null
+                else
+                  callback null, data, fileType
 
   put: (remoteFilePath, fileBuffer, callback) ->
     tmp.file (err, tmpFilePath) =>
@@ -166,4 +172,3 @@ module.exports = class SFTP
         lines.shift()
         lines.pop()
         callback lines.join "\n"
-

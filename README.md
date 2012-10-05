@@ -32,7 +32,7 @@ sftp.ls('path/to/heaven', function(err, list:Array) {
 
 sftp.put('path/to/new/file', 'file content':Buffer|String, function(err) {});
 
-sftp.get('path/to/file', function(err, content:Buffer) {
+sftp.get('path/to/file', function(err, content:Buffer, fileType:String) {
   var contentString = content.toString('utf8');
 });
 
@@ -52,4 +52,3 @@ sftp.df('user', 'path/to/heaven', function (err, info:Object) {
 });
 sftp.ln('path/to/file', 'path/to/link', function(err) {});
 ```
-

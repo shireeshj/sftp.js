@@ -1,6 +1,7 @@
 SFTP = require '../../lib/sftp'
 _ = require 'underscore'
 fs = require 'fs'
+childProcess = require 'child_process'
 tmp = require 'tmp'
 pty = require 'pty.js'
 EventEmitter = require('events').EventEmitter
@@ -504,32 +505,64 @@ describe 'SFTP', ->
         ''' + '\nsftp> '
         sinon.stub fs, 'readFile'
         sinon.stub fs, 'unlink'
+        sinon.stub childProcess, 'exec'
         sftp.runCommand.callsArgWith 1, output
 
       afterEach ->
         fs.readFile.restore()
         fs.unlink.restore()
+        childProcess.exec.restore()
 
-      context 'when readFile succeeds', ->
+      context 'when exec succeeds', ->
         beforeEach ->
+          childProcess.exec.callsArgWith 1, null, 'some file type'
           fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
 
         it 'returns no errors', (done) ->
-          sftp.get 'path/to/remote-file', (err, data) ->
+          sftp.get 'path/to/remote-file', (err, data, fileType) ->
+              expect(err).not.to.exist
+              expect(data).to.be.an.instanceOf Buffer
+              expect(fileType).to.equal 'some file type'
+              expect(data.toString 'utf8').to.equal 'some file content'
+              expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
+              done()
+
+      context 'when exec fails with error', ->
+        beforeEach ->
+          childProcess.exec.callsArgWith 1, new Error 'mega error', null
+
+        it 'returns error', (done) ->
+          sftp.get 'path/to/remote-file', (err, data, fileType) ->
+            expect(err.toString()).to.contain 'mega error'
+            expect(data).not.to.exist
+            expect(fileType).not.to.exist
+            expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
+            done()
+
+      context 'when readFile succeeds', ->
+        beforeEach ->
+          childProcess.exec.callsArgWith 1, null, 'some file type'
+          fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
+
+        it 'returns no errors', (done) ->
+          sftp.get 'path/to/remote-file', (err, data, fileType) ->
             expect(err).not.to.exist
             expect(data).to.be.an.instanceOf Buffer
+            expect(fileType).to.equal 'some file type'
             expect(data.toString 'utf8').to.equal 'some file content'
             expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
             done()
 
       context 'when readFile fails with error', ->
         beforeEach ->
+          childProcess.exec.callsArgWith 1, null, 'some file type'
           fs.readFile.callsArgWith 1, new Error 'some error'
 
         it 'returns error', (done) ->
-          sftp.get 'path/to/remote-file', (err, data) ->
+          sftp.get 'path/to/remote-file', (err, data, fileType) ->
             expect(err.toString()).to.contain 'some error'
-            expect(err.data).not.to.exist
+            expect(data).not.to.exist
+            expect(fileType).not.to.exist
             expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
             done()
 
@@ -543,7 +576,7 @@ describe 'SFTP', ->
         sftp.runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
-        sftp.get 'path/to/remote-file', (err, data) ->
+        sftp.get 'path/to/remote-file', (err) ->
           expect(err).to.equal '''
             Couldn\'t stat remote file: No such file or directory
             File "/home/ubuntu/remote-file" not found
@@ -726,4 +759,3 @@ describe 'SFTP', ->
             error message
           '''
           done()
-
