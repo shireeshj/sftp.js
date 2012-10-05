@@ -516,14 +516,35 @@ describe 'SFTP', ->
       context 'when exec succeeds', ->
         beforeEach ->
           childProcess.exec.callsArgWith 1, null, 'some file type'
-          fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
 
-        it 'returns no errors', (done) ->
-          sftp.get 'path/to/remote-file', (err, data, fileType) ->
+        it 'reads the temp file', ->
+          sftp.get 'path/to/remote-file', cbSpy
+          expect(fs.readFile).to.have.been.calledWith '/tmp/action/remote-file'
+          expect(fs.unlink).not.to.have.been.called
+
+        context 'when readFile succeeds', ->
+          beforeEach ->
+            fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
+
+          it 'returns no errors', (done) ->
+            sftp.get 'path/to/remote-file', (err, data, fileType) ->
               expect(err).not.to.exist
               expect(data).to.be.an.instanceOf Buffer
               expect(fileType).to.equal 'some file type'
               expect(data.toString 'utf8').to.equal 'some file content'
+              expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
+              done()
+
+        context 'when readFile fails with error', ->
+          beforeEach ->
+            childProcess.exec.callsArgWith 1, null, 'some file type'
+            fs.readFile.callsArgWith 1, new Error 'some error'
+
+          it 'returns error', (done) ->
+            sftp.get 'path/to/remote-file', (err, data, fileType) ->
+              expect(err.toString()).to.contain 'some error'
+              expect(data).not.to.exist
+              expect(fileType).not.to.exist
               expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
               done()
 
@@ -534,33 +555,6 @@ describe 'SFTP', ->
         it 'returns error', (done) ->
           sftp.get 'path/to/remote-file', (err, data, fileType) ->
             expect(err.toString()).to.contain 'mega error'
-            expect(data).not.to.exist
-            expect(fileType).not.to.exist
-            expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
-            done()
-
-      context 'when readFile succeeds', ->
-        beforeEach ->
-          childProcess.exec.callsArgWith 1, null, 'some file type'
-          fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
-
-        it 'returns no errors', (done) ->
-          sftp.get 'path/to/remote-file', (err, data, fileType) ->
-            expect(err).not.to.exist
-            expect(data).to.be.an.instanceOf Buffer
-            expect(fileType).to.equal 'some file type'
-            expect(data.toString 'utf8').to.equal 'some file content'
-            expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
-            done()
-
-      context 'when readFile fails with error', ->
-        beforeEach ->
-          childProcess.exec.callsArgWith 1, null, 'some file type'
-          fs.readFile.callsArgWith 1, new Error 'some error'
-
-        it 'returns error', (done) ->
-          sftp.get 'path/to/remote-file', (err, data, fileType) ->
-            expect(err.toString()).to.contain 'some error'
             expect(data).not.to.exist
             expect(fileType).not.to.exist
             expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'

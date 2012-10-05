@@ -133,8 +133,8 @@ module.exports = class SFTP
         else
           tmpFilePath = "#{tmpDirPath}/#{path.basename filePath}"
           childProcess.exec "file #{tmpFilePath}", (err, fileType) ->
-            fs.unlink tmpFilePath
             if err
+              fs.unlink tmpFilePath
               callback err, null, null
             else
               fs.readFile tmpFilePath, (err, data) ->
