@@ -22,7 +22,7 @@ sftp.destroy(function (err) {
 sftp.ls('path/to/heaven', function(err, list:Array) {
   /* list:
      [
-       [ 'foo', false ]  // [ name, isDirectory ]
+       [ 'foo', false ]  // [ name, isDirectory, fileSize ]
      , [ 'bar', true  ]
      , [ 'baz', false ]
      , [ 'qux', false ]
@@ -31,6 +31,7 @@ sftp.ls('path/to/heaven', function(err, list:Array) {
 });
 
 sftp.put('path/to/new/file', 'file content':Buffer|String, function(err) {});
+
 sftp.get('path/to/file', function(err, content:Buffer) {
   var contentString = content.toString('utf8');
 });

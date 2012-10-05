@@ -315,14 +315,14 @@ describe 'SFTP', ->
         sftp.ls 'path/to/dir', (err, data) ->
           expect(err).not.to.exist
           expect(data).to.deep.equal [
-            [ 'Makefile',    false ]
-            [ 'README.md',   false ]
-            [ 'index.js',    false ]
-            [ 'lib',         true  ]
-            [ 'node_modules',true  ]
-            [ 'package.json',false ]
-            [ 'test',        true  ]
-            [ 'test file',   false ]
+            [ 'Makefile',     false,   63 ]
+            [ 'README.md',    false, 1315 ]
+            [ 'index.js',     false,   67 ]
+            [ 'lib',          true,  4096 ]
+            [ 'node_modules', true,  4096 ]
+            [ 'package.json', false,  615 ]
+            [ 'test',         true,  4096 ]
+            [ 'test file',    false, 4096 ]
           ]
           done()
 

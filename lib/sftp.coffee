@@ -94,9 +94,10 @@ module.exports = class SFTP
       errors = null
       for line in lines
         if !errors && (match = line.match /^\s*([drwx-]+)\s+([\d]+)\s+([\w]+)\s+([\w]+)\s+([\d]+)\s+([\w\s\d]+)([\d]{2}\:[\d]{2})\s+(.*)$/)
+          fileSize = parseInt match[5], 10
           name = match[8]
           isDir = line[0] == 'd'
-          files.push [name, isDir]
+          files.push [name, isDir, fileSize]
         else
           files = null
           errors ?= []
