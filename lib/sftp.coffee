@@ -12,7 +12,6 @@ module.exports = class SFTP
     @port = login.port
     @user = login.user
     @key = login.key
-    @queue = new CommandQueue
 
   writeKeyFile: (callback) -> # callback(err, sshArgs, deleteKeyFile)
     tmp.file (err, path, fd) =>
@@ -51,6 +50,7 @@ module.exports = class SFTP
         deleteKeyFile ->
           callback? err
         return
+      @queue = new CommandQueue
       @pty.once 'data', ->
         deleteKeyFile()
       @pty.on 'close', _.bind(@onPTYClose, this)
@@ -60,12 +60,15 @@ module.exports = class SFTP
     this.destroy()
 
   destroy: (callback) ->
-    @queue.enqueue =>
-      @pty.removeAllListeners()
-      @pty.write "bye\n"
-      @pty.destroy()
-      delete @queue
-      delete @pty
+    if @queue
+      @queue.enqueue =>
+        @pty.removeAllListeners()
+        @pty.write "bye\n"
+        @pty.destroy()
+        delete @queue
+        delete @pty
+        callback?()
+    else
       callback?()
 
   runCommand: (command, callback) ->

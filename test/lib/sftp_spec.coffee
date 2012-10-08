@@ -19,9 +19,6 @@ describe 'SFTP', ->
     expect(sftp.user).to.equal 'peter'
     expect(sftp.key).to.equal 'some rsa private key'
 
-  it 'initializes a command queue', ->
-    expect(sftp.queue).to.be.an.instanceOf CommandQueue
-
   describe '#writeKeyFile', ->
     err = cbSpy = null
 
@@ -128,9 +125,9 @@ describe 'SFTP', ->
         sinon.stub sftp, 'writeKeyFile', (callback) ->
           callback null, ['sshArg1', 'sshArg2'], deleteKeyFileSpy
 
-        doAction = ->
-          sftp.connect cbSpy
-          expect(sftp.writeKeyFile).to.have.been.called
+      doAction = ->
+        sftp.connect cbSpy
+        expect(sftp.writeKeyFile).to.have.been.called
 
       context 'when spawning a new pty fails with exception', ->
         error = null
@@ -168,6 +165,9 @@ describe 'SFTP', ->
         it 'calls callback with no error', ->
           expect(cbSpy).to.have.been.calledWith undefined
 
+        it 'initializes a command queue', ->
+          expect(sftp.queue).to.be.an.instanceOf CommandQueue
+
         describe 'pty events', ->
           context "the first time 'data' event is received", ->
             it 'deletes they key file', ->
@@ -185,34 +185,44 @@ describe 'SFTP', ->
   describe '#destroy', ->
     cbSpy = mockPty = null
 
-    beforeEach ->
-      cbSpy = sinon.spy()
-      mockPty = sftp.pty = new EventEmitter
-      sinon.stub mockPty, 'removeAllListeners'
-      _.extend mockPty,
-        write: ->
-        destroy: ->
-      sinon.stub mockPty, 'write'
-      sinon.stub mockPty, 'destroy'
-      sinon.stub sftp.queue, 'enqueue'
-      sftp.queue.enqueue.callsArg 0
-      sftp.destroy cbSpy
+    context 'when @queue does not exist', ->
+      beforeEach ->
+        cbSpy = sinon.spy()
+        sftp.destroy cbSpy
 
-    it 'removes all listeners on pty', ->
-      expect(mockPty.removeAllListeners).to.have.been.called
+      it 'just calls callback', ->
+        expect(cbSpy).to.have.been.called
 
-    it 'writes "bye" command to pty', ->
-      expect(mockPty.write).to.have.been.calledWith "bye\n"
+    context 'when @queue exists', ->
+      beforeEach ->
+        sftp.queue = new CommandQueue
+        cbSpy = sinon.spy()
+        mockPty = sftp.pty = new EventEmitter
+        sinon.stub mockPty, 'removeAllListeners'
+        _.extend mockPty,
+          write: ->
+          destroy: ->
+        sinon.stub mockPty, 'write'
+        sinon.stub mockPty, 'destroy'
+        sinon.stub sftp.queue, 'enqueue'
+        sftp.queue.enqueue.callsArg 0
+        sftp.destroy cbSpy
 
-    it 'calls #destroy on pty', ->
-      expect(mockPty.destroy).to.have.been.called
+      it 'removes all listeners on pty', ->
+        expect(mockPty.removeAllListeners).to.have.been.called
 
-    it 'deletes the queue and pty', ->
-      expect(sftp.queue).not.to.exist
-      expect(sftp.pty).not.to.exist
+      it 'writes "bye" command to pty', ->
+        expect(mockPty.write).to.have.been.calledWith "bye\n"
 
-    it 'calls callback', ->
-      expect(cbSpy).to.have.been.called
+      it 'calls #destroy on pty', ->
+        expect(mockPty.destroy).to.have.been.called
+
+      it 'deletes the queue and pty', ->
+        expect(sftp.queue).not.to.exist
+        expect(sftp.pty).not.to.exist
+
+      it 'calls callback', ->
+        expect(cbSpy).to.have.been.called
 
   describe 'onPTYClose', ->
     beforeEach ->
@@ -226,6 +236,7 @@ describe 'SFTP', ->
     cbSpy = null
 
     beforeEach ->
+      sftp.queue = new CommandQueue
       cbSpy = sinon.spy()
       sftp.pty = new EventEmitter
       sftp.pty.write = ->

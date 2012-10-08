@@ -8,7 +8,7 @@ var sftp = new SFTP({
   host: 'blahblah.com'
 , port: 22
 , user: 'action'
-, key: 'path/to/private.key'
+, key: '-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED...'
 });
 
 sftp.connect(function(err) {
@@ -22,10 +22,10 @@ sftp.destroy(function (err) {
 sftp.ls('path/to/heaven', function(err, list:Array) {
   /* list:
      [
-       [ 'foo', false ]  // [ name, isDirectory, fileSize ]
-     , [ 'bar', true  ]
-     , [ 'baz', false ]
-     , [ 'qux', false ]
+       [ 'foo', false, 1024 ]  // [ name, isDirectory, fileSize ]
+     , [ 'bar', true,  4096 ]
+     , [ 'baz', false, 123 ]
+     , [ 'qux', false, 456 ]
      ]
   */
 });
