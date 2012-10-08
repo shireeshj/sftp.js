@@ -309,34 +309,46 @@ describe 'SFTP', ->
       expect(sftp.runCommand).to.have.been.calledWith "ls -l 'path/to/dir'"
 
     context 'when runCommand succeeds', ->
-      beforeEach ->
-        output = '''
-          ls -l 'path/to/dir'
-          -rw-rw-r--    1 ubuntu   ubuntu         63 Oct  2 07:10 Makefile
-          -rw-rw-r--    1 ubuntu   ubuntu       1315 Oct  2 09:14 README.md
-          -rw-rw-r--    1 ubuntu   ubuntu         67 Oct  2 08:03 index.js
-          drwxrwxr-x    2 ubuntu   ubuntu       4096 Oct  3 04:22 lib
-          drwxrwxr-x   12 ubuntu   ubuntu       4096 Oct  2 08:08 node_modules
-          -rw-rw-r--    1 ubuntu   ubuntu        615 Oct  2 07:10 package.json
-          drwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test
-          -rwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test file
-        ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+      context 'when the directory is empty', ->
+        beforeEach ->
+          output = "ls -l 'path/to/dir'\nsftp> "
+          sftp.runCommand.callsArgWith 1, output
 
-      it 'parses the output and generates an array of directories and files', (done) ->
-        sftp.ls 'path/to/dir', (err, data) ->
-          expect(err).not.to.exist
-          expect(data).to.deep.equal [
-            [ 'Makefile',     false,   63 ]
-            [ 'README.md',    false, 1315 ]
-            [ 'index.js',     false,   67 ]
-            [ 'lib',          true,  4096 ]
-            [ 'node_modules', true,  4096 ]
-            [ 'package.json', false,  615 ]
-            [ 'test',         true,  4096 ]
-            [ 'test file',    false, 4096 ]
-          ]
-          done()
+        it 'parses the output and generates an array of directories and files', (done) ->
+          sftp.ls 'path/to/dir', (err, data) ->
+            expect(err).not.to.exist
+            expect(data).to.deep.equal []
+            done()
+
+      context 'when the directory is not empty', ->
+        beforeEach ->
+          output = '''
+            ls -l 'path/to/dir'
+            -rw-rw-r--    1 ubuntu   ubuntu         63 Oct  2 07:10 Makefile
+            -rw-rw-r--    1 ubuntu   ubuntu       1315 Oct  2 09:14 README.md
+            -rw-rw-r--    1 ubuntu   ubuntu         67 Oct  2 08:03 index.js
+            drwxrwxr-x    2 ubuntu   ubuntu       4096 Oct  3 04:22 lib
+            drwxrwxr-x   12 ubuntu   ubuntu       4096 Oct  2 08:08 node_modules
+            -rw-rw-r--    1 ubuntu   ubuntu        615 Oct  2 07:10 package.json
+            drwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test
+            -rwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test file
+          ''' + '\nsftp> '
+          sftp.runCommand.callsArgWith 1, output
+
+        it 'parses the output and generates an array of directories and files', (done) ->
+          sftp.ls 'path/to/dir', (err, data) ->
+            expect(err).not.to.exist
+            expect(data).to.deep.equal [
+              [ 'Makefile',     false,   63 ]
+              [ 'README.md',    false, 1315 ]
+              [ 'index.js',     false,   67 ]
+              [ 'lib',          true,  4096 ]
+              [ 'node_modules', true,  4096 ]
+              [ 'package.json', false,  615 ]
+              [ 'test',         true,  4096 ]
+              [ 'test file',    false, 4096 ]
+            ]
+            done()
 
     context 'when runCommand fails', ->
       context 'no such file or directory error', ->
