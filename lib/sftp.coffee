@@ -73,13 +73,13 @@ module.exports = class SFTP
 
   runCommand: (command, callback) ->
     @queue?.enqueue =>
-      buffer = []
+      buffer = ''
       dataListener = (data) =>
         data = data.replace /\r/g, ''
-        buffer.push data
-        if data.indexOf("\nsftp> ") != -1
+        buffer += data
+        if data.match /(^|\n)sftp> $/
           @pty.removeListener 'data', dataListener
-          callback buffer.join ''
+          callback buffer
           @queue.dequeue()
       @pty.on 'data', dataListener
       @pty.write command + "\n"
