@@ -100,6 +100,31 @@ describe 'SFTP', ->
               cbSpy.args[0][2]()
               expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
 
+  describe '#bufferDataUntilPrompt', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sftp.pty = new EventEmitter
+
+    it 'creates a event handler for "data" event on @pty that buffers' +
+       'the output from the server until sftp prompt is received', ->
+      expect(cbSpy).not.to.have.been.called
+      sftp.bufferDataUntilPrompt cbSpy
+      sftp.pty.emit 'data', 'ls'
+      sftp.pty.emit 'data', " -l\r\n"
+      sftp.pty.emit 'data', "foo\r\n"
+      sftp.pty.emit 'data', "bar\r\nbaz"
+      sftp.pty.emit 'data', "\r\nqux\r\nsftp> "
+      expect(cbSpy).to.have.been.called
+      expect(cbSpy).to.have.been.calledWith '''
+        ls -l
+        foo
+        bar
+        baz
+        qux
+      ''' + "\nsftp> "
+
   describe '#connect', ->
     err = cbSpy = null
 
@@ -157,30 +182,39 @@ describe 'SFTP', ->
             expect(cmd).to.equal '/usr/bin/sftp'
             expect(args).to.deep.equal ['sshArg1', 'sshArg2']
             mockPty
+          sinon.stub sftp, 'bufferDataUntilPrompt'
           doAction()
 
         afterEach ->
           pty.spawn.restore()
 
-        it 'calls callback with no error', ->
-          expect(cbSpy).to.have.been.calledWith undefined
+        context 'before sftp> prompt is received', ->
+          it 'does not invoke callback yet', ->
+            expect(cbSpy).not.to.have.been.called
 
-        it 'initializes a command queue', ->
-          expect(sftp.queue).to.be.an.instanceOf CommandQueue
+          it 'does not initialize a command queue yet', ->
+            expect(sftp.queue).not.to.exist
 
-        describe 'pty events', ->
-          context "the first time 'data' event is received", ->
-            it 'deletes they key file', ->
-              expect(deleteKeyFileSpy).not.to.have.been.called
-              mockPty.emit 'data'
-              expect(deleteKeyFileSpy).to.have.been.calledOnce
-              mockPty.emit 'data'
-              expect(deleteKeyFileSpy).to.have.been.calledOnce # only gets called once
+          it 'does not delete the key file yet', ->
+            expect(deleteKeyFileSpy).not.to.have.been.called
 
-          context 'close', ->
-            it 'is handled by #onPTYClose', ->
-              mockPty.emit 'close'
-              expect(sftp.onPTYClose).to.have.been.called
+        context 'after sftp> prompt is received', ->
+          beforeEach ->
+            sftp.bufferDataUntilPrompt.yield 'sftp> '
+
+          it 'calls callback with no error', ->
+            expect(cbSpy).to.have.been.calledWith undefined
+
+          it 'initializes a command queue', ->
+            expect(sftp.queue).to.be.an.instanceOf CommandQueue
+
+          it 'deletes the key file', ->
+            expect(deleteKeyFileSpy).to.have.been.calledOnce
+
+        context 'pty event close', ->
+          it 'is handled by #onPTYClose', ->
+            mockPty.emit 'close'
+            expect(sftp.onPTYClose).to.have.been.called
 
   describe '#destroy', ->
     cbSpy = mockPty = null
@@ -258,25 +292,20 @@ describe 'SFTP', ->
         sftp.queue.enqueue.callsArg 0
         sinon.stub sftp.queue, 'dequeue'
         sinon.stub sftp.pty, 'write'
+        sinon.stub sftp, 'bufferDataUntilPrompt'
         sftp.runCommand 'ls -l', cbSpy
 
-      it 'creates a event handler for "data" event on @pty that buffers' +
-         'the output from the server and then makes a callback and dequeues' +
-         'the command queue when it is done', ->
+      it 'receives data from data then makes a callback and dequeues the command', ->
         expect(cbSpy).not.to.have.been.called
         expect(sftp.queue.dequeue).not.to.have.been.called
-        sftp.pty.emit 'data', 'ls'
-        sftp.pty.emit 'data', " -l\r\n"
-        sftp.pty.emit 'data', "foo\r\n"
-        sftp.pty.emit 'data', "bar\r\nbaz"
-        sftp.pty.emit 'data', "\r\nqux\r\nsftp> "
+        sftp.bufferDataUntilPrompt.yield '''
+          ls -l
+          foo bar baz
+        ''' + "\nsftp> "
         expect(cbSpy).to.have.been.calledOnce
         expect(cbSpy).to.have.been.calledWith '''
           ls -l
-          foo
-          bar
-          baz
-          qux
+          foo bar baz
         ''' + "\nsftp> "
         expect(sftp.queue.dequeue).to.have.been.calledOnce
 

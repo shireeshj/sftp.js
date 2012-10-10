@@ -39,6 +39,16 @@ module.exports = class SFTP
             callback?()
         callback null, sshArgs, deleteKeyFile
 
+  bufferDataUntilPrompt: (callback) ->
+    buffer = ''
+    dataListener = (data) =>
+      data = data.replace /\r/g, ''
+      buffer += data
+      if data.match /(^|\n)sftp> $/
+        @pty.removeListener 'data', dataListener
+        callback buffer
+    @pty.on 'data', dataListener
+
   connect: (callback) -> # callback(err)
     this.writeKeyFile (err, sshArgs, deleteKeyFile) =>
       if err
@@ -50,11 +60,11 @@ module.exports = class SFTP
         deleteKeyFile ->
           callback? err
         return
-      @queue = new CommandQueue
-      @pty.once 'data', ->
+      this.bufferDataUntilPrompt =>
+        @queue = new CommandQueue
         deleteKeyFile()
+        callback?()
       @pty.on 'close', _.bind(@onPTYClose, this)
-      callback?()
 
   onPTYClose: (hadError) ->
     this.destroy()
@@ -73,15 +83,9 @@ module.exports = class SFTP
 
   runCommand: (command, callback) ->
     @queue?.enqueue =>
-      buffer = ''
-      dataListener = (data) =>
-        data = data.replace /\r/g, ''
-        buffer += data
-        if data.match /(^|\n)sftp> $/
-          @pty.removeListener 'data', dataListener
-          callback buffer
-          @queue.dequeue()
-      @pty.on 'data', dataListener
+      this.bufferDataUntilPrompt (data) =>
+        callback data
+        @queue.dequeue()
       @pty.write command + "\n"
 
   @escape: (string) ->
