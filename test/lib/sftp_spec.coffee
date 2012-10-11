@@ -353,6 +353,9 @@ describe 'SFTP', ->
         beforeEach ->
           output = '''
             ls -la 'path/to/dir'
+            drwxr-xr-x   27 ubuntu   ubuntu       4096 Oct 11 11:49 .
+            drwxr-xr-x    3 root     root         4096 Jun 16 13:40 ..
+            -rw-r--r--    1 ubuntu   ubuntu       4120 Oct  2 17:44 .bashrc
             -rw-rw-r--    1 ubuntu   ubuntu         63 Oct  2 07:10 Makefile
             -rw-rw-r--    1 ubuntu   ubuntu       1315 Oct  2 09:14 README.md
             -rw-rw-r--    1 ubuntu   ubuntu         67 Oct  2 08:03 index.js
@@ -368,6 +371,7 @@ describe 'SFTP', ->
           sftp.ls 'path/to/dir', (err, data) ->
             expect(err).not.to.exist
             expect(data).to.deep.equal [
+              [ '.bashrc',      false, 4120 ]
               [ 'Makefile',     false,   63 ]
               [ 'README.md',    false, 1315 ]
               [ 'index.js',     false,   67 ]
