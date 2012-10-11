@@ -542,115 +542,132 @@ describe 'SFTP', ->
 
     beforeEach ->
       cbSpy = sinon.spy()
-      sinon.stub sftp, 'runCommand'
-      sinon.stub tmp, 'dir'
-      tmp.dir.callsArgWith 0, null, '/tmp/action'
+      sinon.stub tmp, 'file'
 
     afterEach ->
-      tmp.dir.restore()
+      tmp.file.restore()
 
-    it 'calls runCommand with get command', ->
+    doAction = ->
       sftp.get 'path/to/remote-file', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith "get 'path/to/remote-file' '/tmp/action'"
 
-    context 'when runCommand succeeds', ->
+    context 'when temp file creation fails', ->
+      err = null
+
       beforeEach ->
-        output = '''
-          get path/to/remote-file
-          Fetching /home/foo/path/to/remote-file to remote-file
-        ''' + '\nsftp> '
-        sinon.stub fs, 'readFile'
-        sinon.stub fs, 'unlink'
-        sinon.stub childProcess, 'exec'
-        sftp.runCommand.callsArgWith 1, output
+        err = new Error 'some error'
+        tmp.file.yields err
+        doAction()
 
-      afterEach ->
-        fs.readFile.restore()
-        fs.unlink.restore()
-        childProcess.exec.restore()
+      it 'makes a callback with error', ->
+        expect(cbSpy).to.have.been.calledWith err
 
-      context 'when exec succeeds', ->
+    context 'when temp file creation succeeds', ->
+      beforeEach ->
+        tmp.file.yields null, '/tmp/action/tempfile'
+        sinon.stub sftp, 'runCommand'
+
+      it 'calls runCommand with get command', ->
+        doAction()
+        expect(sftp.runCommand).to.have.been.calledWith "get 'path/to/remote-file' '/tmp/action/tempfile'"
+
+      context 'when runCommand succeeds', ->
         beforeEach ->
-          childProcess.exec.callsArgWith 1, null, 'some file type'
+          output = '''
+            get 'path/to/remote-file' '/tmp/action/tempfile'
+            Fetching /home/foo/path/to/remote-file to remote-file
+          ''' + '\nsftp> '
+          sinon.stub fs, 'readFile'
+          sinon.stub fs, 'unlink'
+          sinon.stub childProcess, 'exec'
+          sftp.runCommand.callsArgWith 1, output
 
-        it 'reads the temp file', ->
-          sftp.get 'path/to/remote-file', cbSpy
-          expect(fs.readFile).to.have.been.calledWith '/tmp/action/remote-file'
-          expect(fs.unlink).not.to.have.been.called
+        afterEach ->
+          fs.readFile.restore()
+          fs.unlink.restore()
+          childProcess.exec.restore()
 
-        context 'when readFile succeeds', ->
-          beforeEach ->
-            fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
-
-          it 'returns no errors', (done) ->
-            sftp.get 'path/to/remote-file', (err, data, fileType) ->
-              expect(err).not.to.exist
-              expect(data).to.be.an.instanceOf Buffer
-              expect(fileType).to.equal 'some file type'
-              expect(data.toString 'utf8').to.equal 'some file content'
-              expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
-              done()
-
-        context 'when readFile fails with error', ->
+        context 'when exec succeeds', ->
           beforeEach ->
             childProcess.exec.callsArgWith 1, null, 'some file type'
-            fs.readFile.callsArgWith 1, new Error 'some error'
+
+          it 'reads the temp file', ->
+            doAction()
+            expect(fs.readFile).to.have.been.calledWith '/tmp/action/tempfile'
+            expect(fs.unlink).not.to.have.been.called
+
+          context 'when readFile succeeds', ->
+            beforeEach ->
+              fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
+
+            it 'returns no errors', (done) ->
+              sftp.get 'path/to/remote-file', (err, data, fileType) ->
+                expect(err).not.to.exist
+                expect(data).to.be.an.instanceOf Buffer
+                expect(fileType).to.equal 'some file type'
+                expect(data.toString 'utf8').to.equal 'some file content'
+                expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
+                done()
+
+          context 'when readFile fails with error', ->
+            beforeEach ->
+              childProcess.exec.callsArgWith 1, null, 'some file type'
+              fs.readFile.callsArgWith 1, new Error 'some error'
+
+            it 'returns error', (done) ->
+              sftp.get 'path/to/remote-file', (err, data, fileType) ->
+                expect(err.toString()).to.contain 'some error'
+                expect(data).not.to.exist
+                expect(fileType).not.to.exist
+                expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
+                done()
+
+        context 'when exec fails with error', ->
+          beforeEach ->
+            childProcess.exec.callsArgWith 1, new Error 'mega error', null
 
           it 'returns error', (done) ->
             sftp.get 'path/to/remote-file', (err, data, fileType) ->
-              expect(err.toString()).to.contain 'some error'
+              expect(err.toString()).to.contain 'mega error'
               expect(data).not.to.exist
               expect(fileType).not.to.exist
-              expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
+              expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
               done()
 
-      context 'when exec fails with error', ->
+      context 'when runCommand fails with bad path', ->
         beforeEach ->
-          childProcess.exec.callsArgWith 1, new Error 'mega error', null
+          output = '''
+            get 'path/to/remote-file' '/tmp/action/tempfile'
+            Couldn't stat remote file: No such file or directory
+            File "/home/ubuntu/remote-file" not found
+          ''' + '\nsftp> '
+          sftp.runCommand.callsArgWith 1, output
 
-        it 'returns error', (done) ->
-          sftp.get 'path/to/remote-file', (err, data, fileType) ->
-            expect(err.toString()).to.contain 'mega error'
-            expect(data).not.to.exist
-            expect(fileType).not.to.exist
-            expect(fs.unlink).to.have.been.calledWith '/tmp/action/remote-file'
+        it 'returns an error', (done) ->
+          sftp.get 'path/to/remote-file', (err) ->
+            expect(err).to.equal '''
+              Couldn\'t stat remote file: No such file or directory
+              File "/home/ubuntu/remote-file" not found
+            '''
             done()
 
-    context 'when runCommand fails with bad path', ->
-      beforeEach ->
-        output = '''
-          get path/to/remote-file
-          Couldn't stat remote file: No such file or directory
-          File "/home/ubuntu/remote-file" not found
-        ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
-
-      it 'returns an error', (done) ->
-        sftp.get 'path/to/remote-file', (err) ->
-          expect(err).to.equal '''
-            Couldn\'t stat remote file: No such file or directory
-            File "/home/ubuntu/remote-file" not found
-          '''
-          done()
-
-    context 'when there are some other types of error', ->
-      beforeEach ->
-        output = '''
-          get path/to/remote-file /tmp/action
-          some random
-          error message
-          which spans more than 2 lines
-        ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
-
-      it 'returns an error', (done) ->
-        sftp.get 'path/to/remote-file', (err) ->
-          expect(err).to.equal '''
+      context 'when there are some other types of error', ->
+        beforeEach ->
+          output = '''
+            get 'path/to/remote-file' '/tmp/action/tempfile'
             some random
             error message
             which spans more than 2 lines
-          '''
-          done()
+          ''' + '\nsftp> '
+          sftp.runCommand.callsArgWith 1, output
+
+        it 'returns an error', (done) ->
+          sftp.get 'path/to/remote-file', (err) ->
+            expect(err).to.equal '''
+              some random
+              error message
+              which spans more than 2 lines
+            '''
+            done()
 
   describe '#put', ->
     cbSpy = null
@@ -666,8 +683,18 @@ describe 'SFTP', ->
     doAction = ->
       sftp.put '/path/to/remote-file', buf, cbSpy
 
-    context 'when temp file creation succeeds', ->
+    context 'when temp file creation fails', ->
+      err = null
 
+      beforeEach ->
+        err = new Error 'some error'
+        tmp.file.callsArgWith 0, err
+        doAction()
+
+      it 'makes a callback with error', ->
+        expect(cbSpy).to.have.been.calledWith err
+
+    context 'when temp file creation succeeds', ->
       beforeEach ->
         tmp.file.callsArgWith 0, null, '/tmp/action/tempfile'
         sinon.stub fs, 'writeFile'
@@ -723,17 +750,6 @@ describe 'SFTP', ->
 
         it 'makes a callback with error', ->
           expect(cbSpy).to.have.been.calledWith err
-
-    context 'when temp file creation fails', ->
-      err = null
-
-      beforeEach ->
-        err = new Error 'some error'
-        tmp.file.callsArgWith 0, err
-        doAction()
-
-      it 'makes a callback with error', ->
-        expect(cbSpy).to.have.been.calledWith err
 
   describe '#rm', ->
     cbSpy = null

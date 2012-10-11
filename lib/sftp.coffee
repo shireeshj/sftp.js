@@ -131,15 +131,17 @@ module.exports = class SFTP
     this.doBlankResponseCmd 'rmdir', dirPath, callback
 
   get: (filePath, callback) ->
-    tmp.dir (err, tmpDirPath) =>
-      this.runCommand "get #{@constructor.escape filePath} #{@constructor.escape tmpDirPath}", (data) ->
+    tmp.file (err, tmpFilePath) =>
+      if err
+        callback err
+        return
+      this.runCommand "get #{@constructor.escape filePath} #{@constructor.escape tmpFilePath}", (data) ->
         lines = data.split "\n"
         if lines.length != 3
           lines.shift()
           lines.pop()
           callback lines.join "\n"
         else
-          tmpFilePath = "#{tmpDirPath}/#{path.basename filePath}"
           childProcess.exec "file #{tmpFilePath}", (err, fileType) ->
             if err
               fs.unlink tmpFilePath
