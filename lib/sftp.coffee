@@ -101,7 +101,7 @@ module.exports = class SFTP
       files = []
       errors = null
       for line in lines
-        if !errors && (match = line.match /^\s*([drwx-]+)\s+([\d]+)\s+([\w]+)\s+([\w]+)\s+([\d]+)\s+([\w\s\d]+)([\d]{2}\:[\d]{2})\s+(.*)$/)
+        if !errors && (match = line.match /^\s*([drwx-]+)\s+([\d]+)\s+([\w]+)\s+([\w]+)\s+([\d]+)\s+([\w\s\d]+)([\d]{2}\:?[\d]{2})\s+(.*)$/)
           name = match[8]
           if name != '.' && name != '..'
             isDir = line[0] == 'd'

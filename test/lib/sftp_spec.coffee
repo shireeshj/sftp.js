@@ -355,7 +355,7 @@ describe 'SFTP', ->
             ls -la 'path/to/dir'
             drwxr-xr-x   27 ubuntu   ubuntu       4096 Oct 11 11:49 .
             drwxr-xr-x    3 root     root         4096 Jun 16 13:40 ..
-            -rw-r--r--    1 ubuntu   ubuntu       4120 Oct  2 17:44 .bashrc
+            -rw-r--r--    1 ubuntu   ubuntu       4120 Feb 21  2012 .bashrc
             -rw-rw-r--    1 ubuntu   ubuntu         63 Oct  2 07:10 Makefile
             -rw-rw-r--    1 ubuntu   ubuntu       1315 Oct  2 09:14 README.md
             -rw-rw-r--    1 ubuntu   ubuntu         67 Oct  2 08:03 index.js

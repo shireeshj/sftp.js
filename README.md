@@ -1,5 +1,9 @@
 # sftp library for node
 
+Run it using `en_US.UTF-8` locale.
+
+`export LC_ALL=en_US.UTF-8`
+
 ## Readme driven development
 
 ```javascript
