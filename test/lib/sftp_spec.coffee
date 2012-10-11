@@ -27,7 +27,7 @@ describe 'SFTP', ->
         err = new Error
         cbSpy = sinon.spy()
         sinon.stub tmp, 'file'
-        tmp.file.callsArgWith 0, err
+        tmp.file.yields err
         sftp.writeKeyFile cbSpy
 
       afterEach ->
@@ -42,7 +42,7 @@ describe 'SFTP', ->
         sinon.stub tmp, 'file'
         sinon.stub fs, 'writeFile'
         sinon.stub fs, 'unlink'
-        tmp.file.callsArgWith 0, null, '/tmp/tmpfile'
+        tmp.file.yields null, '/tmp/tmpfile'
         fs.unlink.callsArg 1
 
       afterEach ->
@@ -239,7 +239,7 @@ describe 'SFTP', ->
         sinon.stub mockPty, 'write'
         sinon.stub mockPty, 'destroy'
         sinon.stub sftp.queue, 'enqueue'
-        sftp.queue.enqueue.callsArg 0
+        sftp.queue.enqueue.yields()
         sftp.destroy cbSpy
 
       it 'removes all listeners on pty', ->
@@ -289,7 +289,7 @@ describe 'SFTP', ->
     describe 'the enqueued function', ->
       beforeEach ->
         sinon.stub sftp.queue, 'enqueue'
-        sftp.queue.enqueue.callsArg 0
+        sftp.queue.enqueue.yields()
         sinon.stub sftp.queue, 'dequeue'
         sinon.stub sftp.pty, 'write'
         sinon.stub sftp, 'bufferDataUntilPrompt'
@@ -688,7 +688,7 @@ describe 'SFTP', ->
 
       beforeEach ->
         err = new Error 'some error'
-        tmp.file.callsArgWith 0, err
+        tmp.file.yields err
         doAction()
 
       it 'makes a callback with error', ->
@@ -696,7 +696,7 @@ describe 'SFTP', ->
 
     context 'when temp file creation succeeds', ->
       beforeEach ->
-        tmp.file.callsArgWith 0, null, '/tmp/action/tempfile'
+        tmp.file.yields null, '/tmp/action/tempfile'
         sinon.stub fs, 'writeFile'
 
       afterEach ->
