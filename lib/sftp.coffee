@@ -94,7 +94,7 @@ module.exports = class SFTP
     null
 
   ls: (filePath, callback) ->
-    this.runCommand "ls -l #{@constructor.escape filePath}", (data) ->
+    this.runCommand "ls -la #{@constructor.escape filePath}", (data) ->
       lines = data.split "\n"
       lines.shift()
       lines.pop()

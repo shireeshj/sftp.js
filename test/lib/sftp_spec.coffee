@@ -112,13 +112,13 @@ describe 'SFTP', ->
       expect(cbSpy).not.to.have.been.called
       sftp.bufferDataUntilPrompt cbSpy
       sftp.pty.emit 'data', 'ls'
-      sftp.pty.emit 'data', " -l\r\n"
+      sftp.pty.emit 'data', " -la\r\n"
       sftp.pty.emit 'data', "foo\r\n"
       sftp.pty.emit 'data', "bar\r\nbaz"
       sftp.pty.emit 'data', "\r\nqux\r\nsftp> "
       expect(cbSpy).to.have.been.called
       expect(cbSpy).to.have.been.calledWith '''
-        ls -l
+        ls -la
         foo
         bar
         baz
@@ -293,24 +293,24 @@ describe 'SFTP', ->
         sinon.stub sftp.queue, 'dequeue'
         sinon.stub sftp.pty, 'write'
         sinon.stub sftp, 'bufferDataUntilPrompt'
-        sftp.runCommand 'ls -l', cbSpy
+        sftp.runCommand 'ls -la', cbSpy
 
       it 'receives data from data then makes a callback and dequeues the command', ->
         expect(cbSpy).not.to.have.been.called
         expect(sftp.queue.dequeue).not.to.have.been.called
         sftp.bufferDataUntilPrompt.yield '''
-          ls -l
+          ls -la
           foo bar baz
         ''' + "\nsftp> "
         expect(cbSpy).to.have.been.calledOnce
         expect(cbSpy).to.have.been.calledWith '''
-          ls -l
+          ls -la
           foo bar baz
         ''' + "\nsftp> "
         expect(sftp.queue.dequeue).to.have.been.calledOnce
 
       it 'writes the command to @pty', ->
-        expect(sftp.pty.write).to.have.been.calledWith "ls -l\n"
+        expect(sftp.pty.write).to.have.been.calledWith "ls -la\n"
 
   describe '.escape', ->
     context 'when given a string', ->
@@ -335,12 +335,12 @@ describe 'SFTP', ->
 
     it 'calls runCommand with ls command', ->
       sftp.ls 'path/to/dir', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith "ls -l 'path/to/dir'"
+      expect(sftp.runCommand).to.have.been.calledWith "ls -la 'path/to/dir'"
 
     context 'when runCommand succeeds', ->
       context 'when the directory is empty', ->
         beforeEach ->
-          output = "ls -l 'path/to/dir'\nsftp> "
+          output = "ls -la 'path/to/dir'\nsftp> "
           sftp.runCommand.callsArgWith 1, output
 
         it 'parses the output and generates an array of directories and files', (done) ->
@@ -352,7 +352,7 @@ describe 'SFTP', ->
       context 'when the directory is not empty', ->
         beforeEach ->
           output = '''
-            ls -l 'path/to/dir'
+            ls -la 'path/to/dir'
             -rw-rw-r--    1 ubuntu   ubuntu         63 Oct  2 07:10 Makefile
             -rw-rw-r--    1 ubuntu   ubuntu       1315 Oct  2 09:14 README.md
             -rw-rw-r--    1 ubuntu   ubuntu         67 Oct  2 08:03 index.js
@@ -383,7 +383,7 @@ describe 'SFTP', ->
       context 'no such file or directory error', ->
         beforeEach ->
           output = '''
-            ls -l 'path/to/dir'
+            ls -la 'path/to/dir'
             Couldn't stat remote file: No such file or directory
             Can't ls: "/home/ubuntu/path/to/dir" not found
           ''' + '\nsftp> '
@@ -400,7 +400,7 @@ describe 'SFTP', ->
       context 'other errors', ->
         beforeEach ->
           output = '''
-            ls -l 'path/to/dir'
+            ls -la 'path/to/dir'
             some random
             error message
           ''' + '\nsftp> '
