@@ -14,7 +14,7 @@ module.exports = class SFTP
     @key = login.key
 
   writeKeyFile: (callback) -> # callback(err, sshArgs, deleteKeyFile)
-    tmp.file (err, path, fd) =>
+    tmp.tmpName (err, path) =>
       if err
         callback err
         return
@@ -131,7 +131,7 @@ module.exports = class SFTP
     this.doBlankResponseCmd 'rmdir', dirPath, callback
 
   get: (filePath, callback) ->
-    tmp.file (err, tmpFilePath) =>
+    tmp.tmpName (err, tmpFilePath) =>
       if err
         callback err
         return
@@ -155,7 +155,7 @@ module.exports = class SFTP
                   callback null, data, fileType
 
   put: (remoteFilePath, fileBuffer, callback) ->
-    tmp.file (err, tmpFilePath) =>
+    tmp.tmpName (err, tmpFilePath) =>
       if err
         callback err
         return

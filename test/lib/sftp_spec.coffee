@@ -26,12 +26,12 @@ describe 'SFTP', ->
       beforeEach ->
         err = new Error
         cbSpy = sinon.spy()
-        sinon.stub tmp, 'file'
-        tmp.file.yields err
+        sinon.stub tmp, 'tmpName'
+        tmp.tmpName.yields err
         sftp.writeKeyFile cbSpy
 
       afterEach ->
-        tmp.file.restore()
+        tmp.tmpName.restore()
 
       it 'makes a callback with the error', ->
         expect(cbSpy).to.have.been.calledWith err
@@ -39,14 +39,14 @@ describe 'SFTP', ->
     context 'when temp file is successfully created', ->
       beforeEach ->
         err = new Error
-        sinon.stub tmp, 'file'
+        sinon.stub tmp, 'tmpName'
         sinon.stub fs, 'writeFile'
         sinon.stub fs, 'unlink'
-        tmp.file.yields null, '/tmp/tmpfile'
+        tmp.tmpName.yields null, '/tmp/tmpfile'
         fs.unlink.callsArg 1
 
       afterEach ->
-        tmp.file.restore()
+        tmp.tmpName.restore()
         fs.writeFile.restore()
         fs.unlink.restore()
 
@@ -542,10 +542,10 @@ describe 'SFTP', ->
 
     beforeEach ->
       cbSpy = sinon.spy()
-      sinon.stub tmp, 'file'
+      sinon.stub tmp, 'tmpName'
 
     afterEach ->
-      tmp.file.restore()
+      tmp.tmpName.restore()
 
     doAction = ->
       sftp.get 'path/to/remote-file', cbSpy
@@ -555,7 +555,7 @@ describe 'SFTP', ->
 
       beforeEach ->
         err = new Error 'some error'
-        tmp.file.yields err
+        tmp.tmpName.yields err
         doAction()
 
       it 'makes a callback with error', ->
@@ -563,7 +563,7 @@ describe 'SFTP', ->
 
     context 'when temp file creation succeeds', ->
       beforeEach ->
-        tmp.file.yields null, '/tmp/action/tempfile'
+        tmp.tmpName.yields null, '/tmp/action/tempfile'
         sinon.stub sftp, 'runCommand'
 
       it 'calls runCommand with get command', ->
@@ -675,10 +675,10 @@ describe 'SFTP', ->
 
     beforeEach ->
       cbSpy = sinon.spy()
-      sinon.stub tmp, 'file'
+      sinon.stub tmp, 'tmpName'
 
     afterEach ->
-      tmp.file.restore()
+      tmp.tmpName.restore()
 
     doAction = ->
       sftp.put '/path/to/remote-file', buf, cbSpy
@@ -688,7 +688,7 @@ describe 'SFTP', ->
 
       beforeEach ->
         err = new Error 'some error'
-        tmp.file.yields err
+        tmp.tmpName.yields err
         doAction()
 
       it 'makes a callback with error', ->
@@ -696,7 +696,7 @@ describe 'SFTP', ->
 
     context 'when temp file creation succeeds', ->
       beforeEach ->
-        tmp.file.yields null, '/tmp/action/tempfile'
+        tmp.tmpName.yields null, '/tmp/action/tempfile'
         sinon.stub fs, 'writeFile'
 
       afterEach ->
