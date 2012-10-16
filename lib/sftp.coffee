@@ -135,14 +135,14 @@ module.exports = class SFTP
       if err
         callback err
         return
-      this.runCommand "get #{@constructor.escape filePath} #{@constructor.escape tmpFilePath}", (data) ->
+      this.runCommand "get #{@constructor.escape filePath} #{@constructor.escape tmpFilePath}", (data) =>
         lines = data.split "\n"
         if lines.length != 3
           lines.shift()
           lines.pop()
           callback lines.join "\n"
         else
-          childProcess.exec "file #{tmpFilePath}", (err, fileType) ->
+          childProcess.exec "file #{@constructor.escape tmpFilePath}", (err, fileType) ->
             if err
               fs.unlink tmpFilePath
               callback err
@@ -154,16 +154,16 @@ module.exports = class SFTP
                 else
                   callback null, data, fileType
 
-  put: (remoteFilePath, fileBuffer, callback) ->
+  put: (remotePath, contentData, callback) ->
     tmp.tmpName (err, tmpFilePath) =>
       if err
         callback err
         return
-      fs.writeFile tmpFilePath, fileBuffer, (err) =>
+      fs.writeFile tmpFilePath, contentData, (err) =>
         if err
           callback err
           return
-        this.runCommand "put #{@constructor.escape tmpFilePath} #{@constructor.escape remoteFilePath}", (data) ->
+        this.runCommand "put #{@constructor.escape tmpFilePath} #{@constructor.escape remotePath}", (data) ->
           lines = data.split "\n"
           lines.shift()
           lines.pop()

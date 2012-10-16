@@ -586,7 +586,11 @@ describe 'SFTP', ->
           fs.unlink.restore()
           childProcess.exec.restore()
 
-        context 'when exec succeeds', ->
+        it 'runs file command to determine file type', ->
+          doAction()
+          expect(childProcess.exec).to.have.been.calledWith "file '/tmp/action/tempfile'"
+
+        context 'when file command succeeds', ->
           beforeEach ->
             childProcess.exec.callsArgWith 1, null, 'some file type'
 
@@ -681,7 +685,7 @@ describe 'SFTP', ->
       tmp.tmpName.restore()
 
     doAction = ->
-      sftp.put '/path/to/remote-file', buf, cbSpy
+      sftp.put '/remote/path', buf, cbSpy
 
     context 'when temp file creation fails', ->
       err = null
@@ -713,7 +717,7 @@ describe 'SFTP', ->
           doAction()
 
         it 'calls runCommand with put command', ->
-          expect(sftp.runCommand).to.have.been.calledWith "put '/tmp/action/tempfile' '/path/to/remote-file'"
+          expect(sftp.runCommand).to.have.been.calledWith "put '/tmp/action/tempfile' '/remote/path'"
 
         context 'when runCommand succeeds', ->
           beforeEach ->
