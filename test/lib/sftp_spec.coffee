@@ -19,7 +19,7 @@ describe 'SFTP', ->
     expect(sftp.user).to.equal 'peter'
     expect(sftp.key).to.equal 'some rsa private key'
 
-  describe '#writeKeyFile', ->
+  describe '#_writeKeyFile', ->
     err = cbSpy = null
 
     context 'when temp file failed to get created', ->
@@ -28,7 +28,7 @@ describe 'SFTP', ->
         cbSpy = sinon.spy()
         sinon.stub tmp, 'tmpName'
         tmp.tmpName.yields err
-        sftp.writeKeyFile cbSpy
+        sftp._writeKeyFile cbSpy
 
       afterEach ->
         tmp.tmpName.restore()
@@ -51,7 +51,7 @@ describe 'SFTP', ->
         fs.unlink.restore()
 
       it 'writes the key to the temp file', ->
-        sftp.writeKeyFile cbSpy
+        sftp._writeKeyFile cbSpy
         expect(fs.writeFile).to.have.been.calledWith '/tmp/tmpfile'
         expect(fs.writeFile.args[0][1].toString 'utf8').to.equal sftp.key
 
@@ -59,7 +59,7 @@ describe 'SFTP', ->
         beforeEach ->
           fs.writeFile.callsArgWith 2, err
           cbSpy = sinon.spy()
-          sftp.writeKeyFile cbSpy
+          sftp._writeKeyFile cbSpy
 
         it 'deletes the temp file', ->
           expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
@@ -71,7 +71,7 @@ describe 'SFTP', ->
         beforeEach ->
           fs.writeFile.callsArg 2
           cbSpy = sinon.spy()
-          sftp.writeKeyFile cbSpy
+          sftp._writeKeyFile cbSpy
 
         it 'makes a callback with ssh arguments as the first argument', ->
           expect(cbSpy).to.have.been.called
@@ -100,7 +100,7 @@ describe 'SFTP', ->
               cbSpy.args[0][2]()
               expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
 
-  describe '#bufferDataUntilPrompt', ->
+  describe '#_bufferDataUntilPrompt', ->
     cbSpy = null
 
     beforeEach ->
@@ -110,7 +110,7 @@ describe 'SFTP', ->
     it 'creates a event handler for "data" event on @pty that buffers' +
        'the output from the server until sftp prompt is received', ->
       expect(cbSpy).not.to.have.been.called
-      sftp.bufferDataUntilPrompt cbSpy
+      sftp._bufferDataUntilPrompt cbSpy
       sftp.pty.emit 'data', 'ls'
       sftp.pty.emit 'data', " -la\r\n"
       sftp.pty.emit 'data', "foo\r\n"
@@ -128,31 +128,31 @@ describe 'SFTP', ->
   describe '#connect', ->
     err = cbSpy = null
 
-    context 'when writeKeyFile fails with error', ->
+    context 'when _writeKeyFile fails with error', ->
       beforeEach ->
         err = new Error
         cbSpy = sinon.spy()
-        sinon.stub sftp, 'writeKeyFile', (callback) ->
+        sinon.stub sftp, '_writeKeyFile', (callback) ->
           callback(err)
 
         sftp.connect cbSpy
-        expect(sftp.writeKeyFile).to.have.been.called
+        expect(sftp._writeKeyFile).to.have.been.called
 
       it 'makes a callback with the error', ->
         expect(cbSpy).to.have.been.calledWith err
 
-    context 'when writeKeyFile succeeds', ->
+    context 'when _writeKeyFile succeeds', ->
       deleteKeyFileSpy = doAction = null
 
       beforeEach ->
         deleteKeyFileSpy = sinon.spy (cb) -> cb?()
         cbSpy = sinon.spy()
-        sinon.stub sftp, 'writeKeyFile', (callback) ->
+        sinon.stub sftp, '_writeKeyFile', (callback) ->
           callback null, ['sshArg1', 'sshArg2'], deleteKeyFileSpy
 
       doAction = ->
         sftp.connect cbSpy
-        expect(sftp.writeKeyFile).to.have.been.called
+        expect(sftp._writeKeyFile).to.have.been.called
 
       context 'when spawning a new pty fails with exception', ->
         error = null
@@ -177,12 +177,12 @@ describe 'SFTP', ->
 
         beforeEach ->
           mockPty = new EventEmitter()
-          sinon.stub sftp, 'onPTYClose'
+          sinon.stub sftp, '_onPTYClose'
           sinon.stub pty, 'spawn', (cmd, args) ->
             expect(cmd).to.equal '/usr/bin/sftp'
             expect(args).to.deep.equal ['sshArg1', 'sshArg2']
             mockPty
-          sinon.stub sftp, 'bufferDataUntilPrompt'
+          sinon.stub sftp, '_bufferDataUntilPrompt'
           doAction()
 
         afterEach ->
@@ -200,7 +200,7 @@ describe 'SFTP', ->
 
         context 'after sftp> prompt is received', ->
           beforeEach ->
-            sftp.bufferDataUntilPrompt.yield 'sftp> '
+            sftp._bufferDataUntilPrompt.yield 'sftp> '
 
           it 'calls callback with no error', ->
             expect(cbSpy).to.have.been.calledWith undefined
@@ -212,9 +212,9 @@ describe 'SFTP', ->
             expect(deleteKeyFileSpy).to.have.been.calledOnce
 
         context 'pty event close', ->
-          it 'is handled by #onPTYClose', ->
+          it 'is handled by #_onPTYClose', ->
             mockPty.emit 'close'
-            expect(sftp.onPTYClose).to.have.been.called
+            expect(sftp._onPTYClose).to.have.been.called
 
   describe '#destroy', ->
     cbSpy = mockPty = null
@@ -256,15 +256,15 @@ describe 'SFTP', ->
       it 'calls callback', ->
         expect(cbSpy).to.have.been.called
 
-  describe 'onPTYClose', ->
+  describe '_onPTYClose', ->
     beforeEach ->
       sinon.stub sftp, 'destroy'
-      sftp.onPTYClose()
+      sftp._onPTYClose()
 
     it 'calls #destroy', ->
       expect(sftp.destroy).to.have.been.called
 
-  describe '#runCommand', ->
+  describe '#_runCommand', ->
     cbSpy = null
 
     beforeEach ->
@@ -274,7 +274,7 @@ describe 'SFTP', ->
       sftp.pty.write = ->
 
     it 'enqueues a function', ->
-      sftp.runCommand 'ls', cbSpy
+      sftp._runCommand 'ls', cbSpy
       expect(sftp.queue.items).to.have.length 1
 
     context 'when the command queue is deleted', ->
@@ -282,7 +282,7 @@ describe 'SFTP', ->
         delete sftp.queue
 
       it 'does nothing', ->
-        sftp.runCommand 'ls', cbSpy
+        sftp._runCommand 'ls', cbSpy
 
     describe 'the enqueued function', ->
       beforeEach ->
@@ -290,13 +290,13 @@ describe 'SFTP', ->
         sftp.queue.enqueue.yields()
         sinon.stub sftp.queue, 'dequeue'
         sinon.stub sftp.pty, 'write'
-        sinon.stub sftp, 'bufferDataUntilPrompt'
-        sftp.runCommand 'ls -la', cbSpy
+        sinon.stub sftp, '_bufferDataUntilPrompt'
+        sftp._runCommand 'ls -la', cbSpy
 
       it 'receives data from data then makes a callback and dequeues the command', ->
         expect(cbSpy).not.to.have.been.called
         expect(sftp.queue.dequeue).not.to.have.been.called
-        sftp.bufferDataUntilPrompt.yield '''
+        sftp._bufferDataUntilPrompt.yield '''
           ls -la
           foo bar baz
         ''' + "\nsftp> "
@@ -329,17 +329,17 @@ describe 'SFTP', ->
 
     beforeEach ->
       cbSpy = sinon.spy()
-      sinon.stub sftp, 'runCommand'
+      sinon.stub sftp, '_runCommand'
 
-    it 'calls runCommand with ls command', ->
+    it 'calls _runCommand with ls command', ->
       sftp.ls 'path/to/dir', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith "ls -la 'path/to/dir'"
+      expect(sftp._runCommand).to.have.been.calledWith "ls -la 'path/to/dir'"
 
-    context 'when runCommand succeeds', ->
+    context 'when _runCommand succeeds', ->
       context 'when the directory is empty', ->
         beforeEach ->
           output = "ls -la 'path/to/dir'\nsftp> "
-          sftp.runCommand.callsArgWith 1, output
+          sftp._runCommand.callsArgWith 1, output
 
         it 'parses the output and generates an array of directories and files', (done) ->
           sftp.ls 'path/to/dir', (err, data) ->
@@ -363,7 +363,7 @@ describe 'SFTP', ->
             drwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test
             -rwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test file
           ''' + '\nsftp> '
-          sftp.runCommand.callsArgWith 1, output
+          sftp._runCommand.callsArgWith 1, output
 
         it 'parses the output and generates an array of directories and files', (done) ->
           sftp.ls 'path/to/dir', (err, data) ->
@@ -381,7 +381,7 @@ describe 'SFTP', ->
             ]
             done()
 
-    context 'when runCommand fails', ->
+    context 'when _runCommand fails', ->
       context 'no such file or directory error', ->
         beforeEach ->
           output = '''
@@ -389,7 +389,7 @@ describe 'SFTP', ->
             Couldn't stat remote file: No such file or directory
             Can't ls: "/home/ubuntu/path/to/dir" not found
           ''' + '\nsftp> '
-          sftp.runCommand.callsArgWith 1, output
+          sftp._runCommand.callsArgWith 1, output
 
         it 'returns an error', (done) ->
           sftp.ls '/path/to/dir', (err, data) ->
@@ -406,7 +406,7 @@ describe 'SFTP', ->
             some random
             error message
           ''' + '\nsftp> '
-          sftp.runCommand.callsArgWith 1, output
+          sftp._runCommand.callsArgWith 1, output
 
         it 'returns an error', (done) ->
           sftp.ls '/path/to/dir', (err, data) ->
@@ -421,44 +421,44 @@ describe 'SFTP', ->
 
     beforeEach ->
       cbSpy = sinon.spy()
-      sinon.stub sftp, 'runCommand'
+      sinon.stub sftp, '_runCommand'
 
-    it 'calls runCommand with mkdir command', ->
+    it 'calls _runCommand with mkdir command', ->
       sftp.mkdir 'tmp', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith "mkdir 'tmp'"
+      expect(sftp._runCommand).to.have.been.calledWith "mkdir 'tmp'"
 
-    context 'when runCommand succeeds', ->
+    context 'when _runCommand succeeds', ->
       beforeEach ->
         output = '''
           mkdir tmp
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns no errors', (done) ->
         sftp.mkdir 'tmp', (err) ->
           expect(err).not.to.exist
           done()
 
-    context 'when runCommand fails with bad path', ->
+    context 'when _runCommand fails with bad path', ->
       beforeEach ->
         output = '''
           mkdir tmp/bin
           Couldn't create directory: No such file or directory
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
         sftp.mkdir 'tmp/bin', (err) ->
           expect(err).to.equal 'Couldn\'t create directory: No such file or directory'
           done()
 
-    context 'when runCommand fails with existing path', ->
+    context 'when _runCommand fails with existing path', ->
       beforeEach ->
         output = '''
           mkdir tmp/bin
           Couldn't create directory: Failure
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
         sftp.mkdir 'tmp/bin', (err) ->
@@ -472,7 +472,7 @@ describe 'SFTP', ->
           some random
           error message
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
         sftp.mkdir 'tmp/bin', (err) ->
@@ -487,31 +487,31 @@ describe 'SFTP', ->
 
     beforeEach ->
       cbSpy = sinon.spy()
-      sinon.stub sftp, 'runCommand'
+      sinon.stub sftp, '_runCommand'
 
-    it 'calls runCommand with rmdir command', ->
+    it 'calls _runCommand with rmdir command', ->
       sftp.rmdir 'tmp', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith "rmdir 'tmp'"
+      expect(sftp._runCommand).to.have.been.calledWith "rmdir 'tmp'"
 
-    context 'when runCommand succeeds', ->
+    context 'when _runCommand succeeds', ->
       beforeEach ->
         output = '''
           rmdir tmp
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns no errors', (done) ->
         sftp.rmdir 'tmp', (err) ->
           expect(err).not.to.exist
           done()
 
-    context 'when runCommand fails with bad path', ->
+    context 'when _runCommand fails with bad path', ->
       beforeEach ->
         output = '''
           rmdir tmp/bin
           Couldn't remove directory: No such file or directory
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
         sftp.rmdir 'tmp/bin', (err) ->
@@ -525,7 +525,7 @@ describe 'SFTP', ->
           some random
           error message
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
         sftp.rmdir 'tmp/bin', (err) ->
@@ -562,13 +562,13 @@ describe 'SFTP', ->
     context 'when temp file creation succeeds', ->
       beforeEach ->
         tmp.tmpName.yields null, '/tmp/action/tempfile'
-        sinon.stub sftp, 'runCommand'
+        sinon.stub sftp, '_runCommand'
 
-      it 'calls runCommand with get command', ->
+      it 'calls _runCommand with get command', ->
         doAction()
-        expect(sftp.runCommand).to.have.been.calledWith "get 'path/to/remote-file' '/tmp/action/tempfile'"
+        expect(sftp._runCommand).to.have.been.calledWith "get 'path/to/remote-file' '/tmp/action/tempfile'"
 
-      context 'when runCommand succeeds', ->
+      context 'when _runCommand succeeds', ->
         beforeEach ->
           output = '''
             get 'path/to/remote-file' '/tmp/action/tempfile'
@@ -577,7 +577,7 @@ describe 'SFTP', ->
           sinon.stub fs, 'readFile'
           sinon.stub fs, 'unlink'
           sinon.stub childProcess, 'exec'
-          sftp.runCommand.callsArgWith 1, output
+          sftp._runCommand.callsArgWith 1, output
 
         afterEach ->
           fs.readFile.restore()
@@ -635,14 +635,14 @@ describe 'SFTP', ->
               expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
               done()
 
-      context 'when runCommand fails with bad path', ->
+      context 'when _runCommand fails with bad path', ->
         beforeEach ->
           output = '''
             get 'path/to/remote-file' '/tmp/action/tempfile'
             Couldn't stat remote file: No such file or directory
             File "/home/ubuntu/remote-file" not found
           ''' + '\nsftp> '
-          sftp.runCommand.callsArgWith 1, output
+          sftp._runCommand.callsArgWith 1, output
 
         it 'returns an error', (done) ->
           sftp.get 'path/to/remote-file', (err) ->
@@ -660,7 +660,7 @@ describe 'SFTP', ->
             error message
             which spans more than 2 lines
           ''' + '\nsftp> '
-          sftp.runCommand.callsArgWith 1, output
+          sftp._runCommand.callsArgWith 1, output
 
         it 'returns an error', (done) ->
           sftp.get 'path/to/remote-file', (err) ->
@@ -676,18 +676,18 @@ describe 'SFTP', ->
 
     beforeEach ->
       cbSpy = sinon.spy()
-      sinon.stub sftp, 'runCommand'
+      sinon.stub sftp, '_runCommand'
 
     doAction = (deleteAfterPut=false) ->
       sftp._runPutCommand '/local/path', '/remote/path', deleteAfterPut, cbSpy
 
-    it 'calls runCommand with put command', ->
+    it 'calls _runCommand with put command', ->
       doAction()
-      expect(sftp.runCommand).to.have.been.calledWith "put '/local/path' '/remote/path'"
+      expect(sftp._runCommand).to.have.been.calledWith "put '/local/path' '/remote/path'"
 
-      context 'when runCommand callback is invoked', ->
+      context 'when _runCommand callback is invoked', ->
         beforeEach ->
-          sftp.runCommand.callsArgWith 1, ''
+          sftp._runCommand.callsArgWith 1, ''
           sinon.stub fs, 'unlink'
 
         afterEach ->
@@ -707,13 +707,13 @@ describe 'SFTP', ->
           it 'does not the local file', ->
             expect(fs.unlink).not.to.have.been.calledWith '/local/path'
 
-    context 'when runCommand succeeds', ->
+    context 'when _runCommand succeeds', ->
       beforeEach ->
         output = '''
           put /local/path /remote/path
           Uploading tempfile to /remote/path
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
         doAction()
 
       it 'returns no errors', ->
@@ -721,26 +721,26 @@ describe 'SFTP', ->
         expect(cbSpy).to.have.been.called
         expect(cbSpy.args[0][0]).not.to.exist
 
-    context 'when runCommand fails with bad path', ->
+    context 'when _runCommand fails with bad path', ->
       beforeEach ->
         output = '''
           put /local/path /remote/path
           stat tempfile: No such file or directory
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
         doAction()
 
       it 'returns an error', ->
         expect(cbSpy).to.have.been.calledWith 'stat tempfile: No such file or directory'
 
-    context 'when runCommand fails with some other error', ->
+    context 'when _runCommand fails with some other error', ->
       beforeEach ->
         output = '''
           put /local/path /remote/path
           Uploading tempfile to /remote/path
           Connection Interrupted Due To Alien Invasion
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
         doAction()
 
       it 'returns an error', ->
@@ -865,26 +865,26 @@ describe 'SFTP', ->
 
     beforeEach ->
       cbSpy = sinon.spy()
-      sinon.stub sftp, 'runCommand'
+      sinon.stub sftp, '_runCommand'
 
-    it 'calls runCommand with rm command', ->
+    it 'calls _runCommand with rm command', ->
       sftp.rm 'remote-file', cbSpy
-      expect(sftp.runCommand).to.have.been.calledWith "rm 'remote-file'"
+      expect(sftp._runCommand).to.have.been.calledWith "rm 'remote-file'"
 
-    context 'when runCommand succeeds', ->
+    context 'when _runCommand succeeds', ->
       beforeEach ->
         output = '''
           rm remote-file
           Removing remote-file
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns no errors', (done) ->
         sftp.rm 'remote-file', (err) ->
           expect(err).not.to.exist
           done()
 
-    context 'when runCommand fails with bad path', ->
+    context 'when _runCommand fails with bad path', ->
       beforeEach ->
         output = '''
           rm unknown-file
@@ -892,7 +892,7 @@ describe 'SFTP', ->
           Removing /home/foo/unknown-file
           Couldn't delete file: No such file or directory
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
         sftp.rm 'unknown-file', (err) ->
@@ -903,13 +903,13 @@ describe 'SFTP', ->
           '''
           done()
 
-    context 'when runCommand fails with bad path', ->
+    context 'when _runCommand fails with bad path', ->
       beforeEach ->
         output = '''
           rm unknown-file
           Failed to remove /home/foo/unknown-file
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
         sftp.rm 'unknow-file', (err) ->
@@ -926,7 +926,7 @@ describe 'SFTP', ->
           some random
           error message
         ''' + '\nsftp> '
-        sftp.runCommand.callsArgWith 1, output
+        sftp._runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
         sftp.rm 'remote-file', (err) ->

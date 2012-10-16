@@ -13,7 +13,7 @@ module.exports = class SFTP
     @user = login.user
     @key = login.key
 
-  writeKeyFile: (callback) -> # callback(err, sshArgs, deleteKeyFile)
+  _writeKeyFile: (callback) -> # callback(err, sshArgs, deleteKeyFile)
     tmp.tmpName (err, path) =>
       if err
         callback err
@@ -39,7 +39,7 @@ module.exports = class SFTP
             callback?()
         callback null, sshArgs, deleteKeyFile
 
-  bufferDataUntilPrompt: (callback) ->
+  _bufferDataUntilPrompt: (callback) ->
     buffer = ''
     dataListener = (data) =>
       data = data.replace /\r/g, ''
@@ -50,7 +50,7 @@ module.exports = class SFTP
     @pty.on 'data', dataListener
 
   connect: (callback) -> # callback(err)
-    this.writeKeyFile (err, sshArgs, deleteKeyFile) =>
+    this._writeKeyFile (err, sshArgs, deleteKeyFile) =>
       if err
         callback? err
         return
@@ -60,13 +60,13 @@ module.exports = class SFTP
         deleteKeyFile ->
           callback? err
         return
-      this.bufferDataUntilPrompt =>
+      this._bufferDataUntilPrompt =>
         @queue = new CommandQueue
         deleteKeyFile()
         callback?()
-      @pty.on 'close', _.bind(@onPTYClose, this)
+      @pty.on 'close', _.bind(@_onPTYClose, this)
 
-  onPTYClose: (hadError) ->
+  _onPTYClose: (hadError) ->
     this.destroy()
 
   destroy: (callback) ->
@@ -81,9 +81,9 @@ module.exports = class SFTP
     else
       callback?()
 
-  runCommand: (command, callback) ->
+  _runCommand: (command, callback) ->
     @queue?.enqueue =>
-      this.bufferDataUntilPrompt (data) =>
+      this._bufferDataUntilPrompt (data) =>
         callback data
         @queue.dequeue()
       @pty.write command + "\n"
@@ -94,7 +94,7 @@ module.exports = class SFTP
     null
 
   ls: (filePath, callback) ->
-    this.runCommand "ls -la #{@constructor.escape filePath}", (data) ->
+    this._runCommand "ls -la #{@constructor.escape filePath}", (data) ->
       lines = data.split "\n"
       lines.shift()
       lines.pop()
@@ -114,8 +114,8 @@ module.exports = class SFTP
       errors = errors.join '\n' if errors
       callback errors, files
 
-  doBlankResponseCmd: (command, dirPath, callback) ->
-    this.runCommand "#{command} #{@constructor.escape dirPath}", (data) ->
+  _doBlankResponseCmd: (command, dirPath, callback) ->
+    this._runCommand "#{command} #{@constructor.escape dirPath}", (data) ->
       lines = data.split "\n"
       if lines.length == 2
         callback()
@@ -125,17 +125,17 @@ module.exports = class SFTP
         callback lines.join "\n"
 
   mkdir: (dirPath, callback) ->
-    this.doBlankResponseCmd 'mkdir', dirPath, callback
+    this._doBlankResponseCmd 'mkdir', dirPath, callback
 
   rmdir: (dirPath, callback) ->
-    this.doBlankResponseCmd 'rmdir', dirPath, callback
+    this._doBlankResponseCmd 'rmdir', dirPath, callback
 
   get: (filePath, callback) ->
     tmp.tmpName (err, tmpFilePath) =>
       if err
         callback err
         return
-      this.runCommand "get #{@constructor.escape filePath} #{@constructor.escape tmpFilePath}", (data) =>
+      this._runCommand "get #{@constructor.escape filePath} #{@constructor.escape tmpFilePath}", (data) =>
         lines = data.split "\n"
         if lines.length != 3
           lines.shift()
@@ -155,7 +155,7 @@ module.exports = class SFTP
                   callback null, data, fileType
 
   _runPutCommand: (localPath, remotePath, deleteAfterPut, callback) ->
-    this.runCommand "put #{@constructor.escape localPath} #{@constructor.escape remotePath}", (data) ->
+    this._runCommand "put #{@constructor.escape localPath} #{@constructor.escape remotePath}", (data) ->
       lines = data.split "\n"
       lines.shift()
       lines.pop()
@@ -187,7 +187,7 @@ module.exports = class SFTP
         this._runPutCommand tmpFilePath, remotePath, true, callback
 
   rm: (filePath, callback) ->
-    this.runCommand "rm #{@constructor.escape filePath}", (data) ->
+    this._runCommand "rm #{@constructor.escape filePath}", (data) ->
       lines = data.split "\n"
       lines.shift()
       lines.pop()
