@@ -393,7 +393,8 @@ describe 'SFTP', ->
 
         it 'returns an error', (done) ->
           sftp.ls '/path/to/dir', (err, data) ->
-            expect(err).to.equal '''
+            expect(err).to.be.an.instanceOf Error
+            expect(err.message).to.equal '''
               Couldn't stat remote file: No such file or directory
               Can't ls: "/home/ubuntu/path/to/dir" not found
             '''
@@ -410,7 +411,8 @@ describe 'SFTP', ->
 
         it 'returns an error', (done) ->
           sftp.ls '/path/to/dir', (err, data) ->
-            expect(err).to.equal '''
+            expect(err).to.be.an.instanceOf Error
+            expect(err.message).to.equal '''
               some random
               error message
             '''
@@ -449,7 +451,8 @@ describe 'SFTP', ->
 
       it 'returns an error', (done) ->
         sftp.mkdir 'tmp/bin', (err) ->
-          expect(err).to.equal 'Couldn\'t create directory: No such file or directory'
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal 'Couldn\'t create directory: No such file or directory'
           done()
 
     context 'when _runCommand fails with existing path', ->
@@ -462,7 +465,8 @@ describe 'SFTP', ->
 
       it 'returns an error', (done) ->
         sftp.mkdir 'tmp/bin', (err) ->
-          expect(err).to.equal 'Couldn\'t create directory: Failure'
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal 'Couldn\'t create directory: Failure'
           done()
 
     context 'when there are some other types of error', ->
@@ -476,7 +480,8 @@ describe 'SFTP', ->
 
       it 'returns an error', (done) ->
         sftp.mkdir 'tmp/bin', (err) ->
-          expect(err).to.equal '''
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal '''
             some random
             error message
           '''
@@ -515,7 +520,8 @@ describe 'SFTP', ->
 
       it 'returns an error', (done) ->
         sftp.rmdir 'tmp/bin', (err) ->
-          expect(err).to.equal 'Couldn\'t remove directory: No such file or directory'
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal 'Couldn\'t remove directory: No such file or directory'
           done()
 
     context 'when there are some other types of error', ->
@@ -529,7 +535,8 @@ describe 'SFTP', ->
 
       it 'returns an error', (done) ->
         sftp.rmdir 'tmp/bin', (err) ->
-          expect(err).to.equal '''
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal '''
             some random
             error message
           '''
@@ -611,25 +618,31 @@ describe 'SFTP', ->
                 done()
 
           context 'when readFile fails with error', ->
+            error = null
+
             beforeEach ->
+              error = new Error 'some error'
               childProcess.exec.callsArgWith 1, null, 'some file type'
-              fs.readFile.callsArgWith 1, new Error 'some error'
+              fs.readFile.callsArgWith 1, error
 
             it 'returns error', (done) ->
               sftp.get 'path/to/remote-file', (err, data, fileType) ->
-                expect(err.toString()).to.contain 'some error'
+                expect(err).to.equal error
                 expect(data).not.to.exist
                 expect(fileType).not.to.exist
                 expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
                 done()
 
         context 'when exec fails with error', ->
+          error = null
+
           beforeEach ->
-            childProcess.exec.callsArgWith 1, new Error 'mega error', null
+            error = new Error 'some error'
+            childProcess.exec.callsArgWith 1, error
 
           it 'returns error', (done) ->
             sftp.get 'path/to/remote-file', (err, data, fileType) ->
-              expect(err.toString()).to.contain 'mega error'
+              expect(err).to.equal error
               expect(data).not.to.exist
               expect(fileType).not.to.exist
               expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
@@ -646,7 +659,8 @@ describe 'SFTP', ->
 
         it 'returns an error', (done) ->
           sftp.get 'path/to/remote-file', (err) ->
-            expect(err).to.equal '''
+            expect(err).to.be.an.instanceOf Error
+            expect(err.message).to.equal '''
               Couldn\'t stat remote file: No such file or directory
               File "/home/ubuntu/remote-file" not found
             '''
@@ -664,7 +678,8 @@ describe 'SFTP', ->
 
         it 'returns an error', (done) ->
           sftp.get 'path/to/remote-file', (err) ->
-            expect(err).to.equal '''
+            expect(err).to.be.an.instanceOf Error
+            expect(err.message).to.equal '''
               some random
               error message
               which spans more than 2 lines
@@ -731,7 +746,9 @@ describe 'SFTP', ->
         doAction()
 
       it 'returns an error', ->
-        expect(cbSpy).to.have.been.calledWith 'stat tempfile: No such file or directory'
+        expect(cbSpy).to.have.been.called
+        expect(cbSpy.args[0][0]).to.be.an.instanceOf Error
+        expect(cbSpy.args[0][0].message).to.equal 'stat tempfile: No such file or directory'
 
     context 'when _runCommand fails with some other error', ->
       beforeEach ->
@@ -744,7 +761,9 @@ describe 'SFTP', ->
         doAction()
 
       it 'returns an error', ->
-        expect(cbSpy).to.have.been.calledWith '''
+        expect(cbSpy).to.have.been.called
+        expect(cbSpy.args[0][0]).to.be.an.instanceOf Error
+        expect(cbSpy.args[0][0].message).to.equal '''
           Uploading tempfile to /remote/path
           Connection Interrupted Due To Alien Invasion
         '''
@@ -896,7 +915,8 @@ describe 'SFTP', ->
 
       it 'returns an error', (done) ->
         sftp.rm 'unknown-file', (err) ->
-          expect(err).to.equal '''
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal '''
             Couldn't stat remote file: No such file or directory
             Removing /home/foo/unknown-file
             Couldn't delete file: No such file or directory
@@ -913,7 +933,8 @@ describe 'SFTP', ->
 
       it 'returns an error', (done) ->
         sftp.rm 'unknow-file', (err) ->
-          expect(err).to.equal '''
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal '''
             Failed to remove /home/foo/unknown-file
           '''
           done()
@@ -930,9 +951,11 @@ describe 'SFTP', ->
 
       it 'returns an error', (done) ->
         sftp.rm 'remote-file', (err) ->
-          expect(err).to.equal '''
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal '''
             Removing /home/foo/unknown-file
             some random
             error message
           '''
           done()
+

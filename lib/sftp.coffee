@@ -111,7 +111,7 @@ module.exports = class SFTP
           files = null
           errors ?= []
           errors.push line
-      errors = errors.join '\n' if errors
+      errors = new Error(errors.join '\n') if errors
       callback errors, files
 
   _doBlankResponseCmd: (command, dirPath, callback) ->
@@ -122,7 +122,7 @@ module.exports = class SFTP
       else
         lines.shift()
         lines.pop()
-        callback lines.join "\n"
+        callback new Error(lines.join "\n")
 
   mkdir: (dirPath, callback) ->
     this._doBlankResponseCmd 'mkdir', dirPath, callback
@@ -140,7 +140,7 @@ module.exports = class SFTP
         if lines.length != 3
           lines.shift()
           lines.pop()
-          callback lines.join "\n"
+          callback new Error(lines.join "\n")
         else
           childProcess.exec "file #{@constructor.escape tmpFilePath}", (err, fileType) ->
             if err
@@ -163,7 +163,7 @@ module.exports = class SFTP
       if /^Uploading\s/.test lines.slice(-1)
         callback()
       else
-        callback lines.join "\n"
+        callback new Error(lines.join "\n")
 
   put: (localPath, remotePath, callback) ->
     fs.stat localPath, (err, stats) =>
@@ -194,4 +194,5 @@ module.exports = class SFTP
       if /^Removing\s/.test lines.slice(-1)
         callback()
       else
-        callback lines.join "\n"
+        callback new Error(lines.join "\n")
+

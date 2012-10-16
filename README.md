@@ -19,7 +19,7 @@ sftp.connect(function(err) {
   // once sftp is connected this callback is invoked
 });
 
-sftp.destroy(function (err) {
+sftp.destroy(function () {
   // ends sftp connection and kills pty
 });
 
