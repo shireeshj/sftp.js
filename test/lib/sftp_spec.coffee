@@ -234,10 +234,8 @@ describe 'SFTP', ->
         mockPty = sftp.pty = new EventEmitter
         sinon.stub mockPty, 'removeAllListeners'
         _.extend mockPty,
-          write: ->
-          destroy: ->
-        sinon.stub mockPty, 'write'
-        sinon.stub mockPty, 'destroy'
+          write: sinon.stub()
+          destroy: sinon.stub()
         sinon.stub sftp.queue, 'enqueue'
         sftp.queue.enqueue.yields()
         sftp.destroy cbSpy
@@ -673,7 +671,139 @@ describe 'SFTP', ->
             '''
             done()
 
+  describe '#_runPutCommand', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub sftp, 'runCommand'
+
+    doAction = (deleteAfterPut=false) ->
+      sftp._runPutCommand '/local/path', '/remote/path', deleteAfterPut, cbSpy
+
+    it 'calls runCommand with put command', ->
+      doAction()
+      expect(sftp.runCommand).to.have.been.calledWith "put '/local/path' '/remote/path'"
+
+      context 'when runCommand callback is invoked', ->
+        beforeEach ->
+          sftp.runCommand.callsArgWith 1, ''
+          sinon.stub fs, 'unlink'
+
+        afterEach ->
+          fs.unlink.restore()
+
+        context 'when deleteAfterPut arg is true', ->
+          beforeEach ->
+            doAction true
+
+          it 'deletes the local file', ->
+            expect(fs.unlink).to.have.been.calledWith '/local/path'
+
+        context 'when deleteAfterPut arg is false', ->
+          beforeEach ->
+            doAction false
+
+          it 'does not the local file', ->
+            expect(fs.unlink).not.to.have.been.calledWith '/local/path'
+
+    context 'when runCommand succeeds', ->
+      beforeEach ->
+        output = '''
+          put /local/path /remote/path
+          Uploading tempfile to /remote/path
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+        doAction()
+
+      it 'returns no errors', ->
+        doAction()
+        expect(cbSpy).to.have.been.called
+        expect(cbSpy.args[0][0]).not.to.exist
+
+    context 'when runCommand fails with bad path', ->
+      beforeEach ->
+        output = '''
+          put /local/path /remote/path
+          stat tempfile: No such file or directory
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+        doAction()
+
+      it 'returns an error', ->
+        expect(cbSpy).to.have.been.calledWith 'stat tempfile: No such file or directory'
+
+    context 'when runCommand fails with some other error', ->
+      beforeEach ->
+        output = '''
+          put /local/path /remote/path
+          Uploading tempfile to /remote/path
+          Connection Interrupted Due To Alien Invasion
+        ''' + '\nsftp> '
+        sftp.runCommand.callsArgWith 1, output
+        doAction()
+
+      it 'returns an error', ->
+        expect(cbSpy).to.have.been.calledWith '''
+          Uploading tempfile to /remote/path
+          Connection Interrupted Due To Alien Invasion
+        '''
+
   describe '#put', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub fs, 'stat'
+
+    afterEach ->
+      fs.stat.restore()
+
+    doAction = ->
+      sftp.put '/local/path', '/remote/path', cbSpy
+
+    it 'does fs.stat to check whether local file exists', ->
+      doAction()
+      expect(fs.stat).to.have.been.calledWith '/local/path'
+
+    context 'when fs.stat returns error', ->
+      err = null
+
+      beforeEach ->
+        err = new Error
+        fs.stat.callsArgWith 1, err
+        doAction()
+
+      it 'makes a callback with error', ->
+        expect(cbSpy).to.have.been.calledWith err
+
+    context 'when fs.stat returns stat object', ->
+      mockStats = null
+
+      beforeEach ->
+        mockStats = { isFile: sinon.stub() }
+        fs.stat.callsArgWith 1, null, mockStats
+
+      context 'when the path is not a file', ->
+        beforeEach ->
+          mockStats.isFile.returns false
+          doAction()
+
+        it 'makes a callback with error', ->
+          expect(cbSpy).to.have.been.called
+          expect(cbSpy.args[0][0]).to.be.an.instanceOf Error
+          expect(cbSpy.args[0][0].message).to.equal 'local path does not point to a file'
+
+      context 'when the path is a file', ->
+        beforeEach ->
+          sinon.stub sftp, '_runPutCommand'
+          mockStats.isFile.returns true
+
+        it 'calls _runPutCommand', ->
+          doAction()
+          expect(sftp._runPutCommand).to.have.been.calledWith '/local/path', '/remote/path', false, cbSpy
+
+  describe '#putData', ->
     cbSpy = null
     buf = new Buffer 'some text'
 
@@ -685,7 +815,7 @@ describe 'SFTP', ->
       tmp.tmpName.restore()
 
     doAction = ->
-      sftp.put '/remote/path', buf, cbSpy
+      sftp.putData '/remote/path', buf, cbSpy
 
     context 'when temp file creation fails', ->
       err = null
@@ -710,40 +840,6 @@ describe 'SFTP', ->
         doAction()
         expect(fs.writeFile).to.have.been.calledWith '/tmp/action/tempfile', buf
 
-      context 'when writing a given buffer into the temp file succeeds', ->
-        beforeEach ->
-          fs.writeFile.callsArg 2
-          sinon.stub sftp, 'runCommand'
-          doAction()
-
-        it 'calls runCommand with put command', ->
-          expect(sftp.runCommand).to.have.been.calledWith "put '/tmp/action/tempfile' '/remote/path'"
-
-        context 'when runCommand succeeds', ->
-          beforeEach ->
-            output = '''
-              put /tmp/action/tempfile /path/to/remote-file
-              Uploading tempfile to /path/to/remote-file
-            ''' + '\nsftp> '
-            sftp.runCommand.callsArgWith 1, output
-            doAction()
-
-          it 'returns no errors', ->
-            expect(cbSpy).to.have.been.called
-            expect(cbSpy.args[0][0]).not.to.exist
-
-        context 'when runCommand fails with bad path', ->
-          beforeEach ->
-            output = '''
-              put /tmp/action/tempfile /path/to/remote-file
-              stat tempfile: No such file or directory
-            ''' + '\nsftp> '
-            sftp.runCommand.callsArgWith 1, output
-            doAction()
-
-          it 'returns an error', ->
-            expect(cbSpy).to.have.been.calledWith 'stat tempfile: No such file or directory'
-
       context 'when writing the given buffer into the temp file fails', ->
         err = null
 
@@ -754,6 +850,15 @@ describe 'SFTP', ->
 
         it 'makes a callback with error', ->
           expect(cbSpy).to.have.been.calledWith err
+
+      context 'when writing a given buffer into the temp file succeeds', ->
+        beforeEach ->
+          fs.writeFile.callsArg 2
+          sinon.stub sftp, '_runPutCommand'
+
+        it 'calls _runPutCommand', ->
+          doAction()
+          expect(sftp._runPutCommand).to.have.been.calledWith '/tmp/action/tempfile', '/remote/path', true, cbSpy
 
   describe '#rm', ->
     cbSpy = null
@@ -790,7 +895,7 @@ describe 'SFTP', ->
         sftp.runCommand.callsArgWith 1, output
 
       it 'returns an error', (done) ->
-        sftp.rm 'unknow-file', (err) ->
+        sftp.rm 'unknown-file', (err) ->
           expect(err).to.equal '''
             Couldn't stat remote file: No such file or directory
             Removing /home/foo/unknown-file
@@ -817,6 +922,7 @@ describe 'SFTP', ->
       beforeEach ->
         output = '''
           rm remote-file
+          Removing /home/foo/unknown-file
           some random
           error message
         ''' + '\nsftp> '
@@ -825,6 +931,7 @@ describe 'SFTP', ->
       it 'returns an error', (done) ->
         sftp.rm 'remote-file', (err) ->
           expect(err).to.equal '''
+            Removing /home/foo/unknown-file
             some random
             error message
           '''

@@ -34,7 +34,9 @@ sftp.ls('path/to/heaven', function(err, list:Array) {
   */
 });
 
-sftp.put('path/to/new/file', 'file content':Buffer|String, function(err) {});
+sftp.put('local/path', 'remote/path', function(err) {});
+
+sftp.putData('remote/path', 'content data':Buffer|String, function(err) {});
 
 sftp.get('path/to/file', function(err, content:Buffer, fileType:String) {
   var contentString = content.toString('utf8');

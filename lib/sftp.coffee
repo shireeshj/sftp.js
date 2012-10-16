@@ -154,7 +154,28 @@ module.exports = class SFTP
                 else
                   callback null, data, fileType
 
-  put: (remotePath, contentData, callback) ->
+  _runPutCommand: (localPath, remotePath, deleteAfterPut, callback) ->
+    this.runCommand "put #{@constructor.escape localPath} #{@constructor.escape remotePath}", (data) ->
+      lines = data.split "\n"
+      lines.shift()
+      lines.pop()
+      fs.unlink localPath if deleteAfterPut
+      if /^Uploading\s/.test lines.slice(-1)
+        callback()
+      else
+        callback lines.join "\n"
+
+  put: (localPath, remotePath, callback) ->
+    fs.stat localPath, (err, stats) =>
+      if err
+        callback err
+        return
+      unless stats.isFile()
+        callback new Error('local path does not point to a file')
+        return
+      this._runPutCommand localPath, remotePath, false, callback
+
+  putData: (remotePath, contentData, callback) ->
     tmp.tmpName (err, tmpFilePath) =>
       if err
         callback err
@@ -163,22 +184,14 @@ module.exports = class SFTP
         if err
           callback err
           return
-        this.runCommand "put #{@constructor.escape tmpFilePath} #{@constructor.escape remotePath}", (data) ->
-          lines = data.split "\n"
-          lines.shift()
-          lines.pop()
-          fs.unlink tmpFilePath
-          if /^Uploading\s/.test lines[0]
-            callback()
-          else
-            callback lines.join "\n"
+        this._runPutCommand tmpFilePath, remotePath, true, callback
 
   rm: (filePath, callback) ->
     this.runCommand "rm #{@constructor.escape filePath}", (data) ->
       lines = data.split "\n"
-      if lines.length == 3 && lines[2] == 'sftp> ' && /^Removing\s/.test lines[1]
+      lines.shift()
+      lines.pop()
+      if /^Removing\s/.test lines.slice(-1)
         callback()
       else
-        lines.shift()
-        lines.pop()
         callback lines.join "\n"
