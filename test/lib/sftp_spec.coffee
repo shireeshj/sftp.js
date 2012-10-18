@@ -593,7 +593,7 @@ describe 'SFTP', ->
 
         it 'runs file command to determine file type', ->
           doAction()
-          expect(childProcess.exec).to.have.been.calledWith "file '/tmp/action/tempfile'"
+          expect(childProcess.exec).to.have.been.calledWith "file -b '/tmp/action/tempfile'"
 
         context 'when file command succeeds', ->
           beforeEach ->

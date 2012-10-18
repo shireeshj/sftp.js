@@ -142,7 +142,7 @@ module.exports = class SFTP
           lines.pop()
           callback new Error(lines.join "\n")
         else
-          childProcess.exec "file #{@constructor.escape tmpFilePath}", (err, fileType) ->
+          childProcess.exec "file -b #{@constructor.escape tmpFilePath}", (err, fileType) ->
             if err
               fs.unlink tmpFilePath
               callback err
