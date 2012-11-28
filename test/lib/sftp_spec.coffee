@@ -362,6 +362,8 @@ describe 'SFTP', ->
             -rw-rw-r--    1 ubuntu   ubuntu        615 Oct  2 07:10 package.json
             drwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test
             -rwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 test file
+            lrwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 symlink
+            urwxrwxr-x    3 ubuntu   ubuntu       4096 Oct  2 08:04 unknown type
           ''' + '\nsftp> '
           sftp._runCommand.callsArgWith 1, output
 
@@ -378,6 +380,8 @@ describe 'SFTP', ->
               [ 'package.json', false,  615 ]
               [ 'test',         true,  4096 ]
               [ 'test file',    false, 4096 ]
+              [ 'symlink',      false, 4096 ]
+              [ 'unknown type', false, 4096 ]
             ]
             done()
 

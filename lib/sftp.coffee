@@ -101,11 +101,11 @@ module.exports = class SFTP
       files = []
       errors = null
       for line in lines
-        if !errors && (match = line.match /^\s*([drwx-]+)\s+([\d]+)\s+([\w]+)\s+([\w]+)\s+([\d]+)\s+([\w\s\d]+)([\d]{2}\:?[\d]{2})\s+(.*)$/)
-          name = match[8]
+        if !errors && (match = line.match /^\s*([a-z\-])([rwx\-]+)\s+([\d]+)\s+([\w]+)\s+([\w]+)\s+([\d]+)\s+([\w\s\d]+)([\d]{2}\:?[\d]{2})\s+(.*)$/)
+          name = match[9]
           if name != '.' && name != '..'
-            isDir = line[0] == 'd'
-            fileSize = parseInt match[5], 10
+            isDir = match[1] == 'd'
+            fileSize = parseInt match[6], 10
             files.push [name, isDir, fileSize]
         else
           files = null
