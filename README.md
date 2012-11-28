@@ -60,3 +60,9 @@ sftp.df('user', 'path/to/heaven', function (err, info:Object) {
 });
 sftp.ln('path/to/file', 'path/to/link', function(err) {});
 ```
+
+## LICENSE
+
+Copyright (c) 2012 Irrational Industries Inc. (Action.IO)
+This software is licensed under the [MIT License](https://raw.github.com/action-io/sftp.js/master/LICENSE).
+
