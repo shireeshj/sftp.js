@@ -37,18 +37,23 @@ describe 'SFTP', ->
         expect(cbSpy).to.have.been.calledWith err
 
     context 'when temp file is successfully created', ->
+      fdSpy = null
+
       beforeEach ->
         err = new Error
+        fdSpy = sinon.spy()
         sinon.stub tmp, 'file'
         sinon.stub fs, 'writeFile'
         sinon.stub fs, 'unlink'
-        tmp.file.yields null, '/tmp/tmpfile'
+        sinon.stub fs, 'close'
+        tmp.file.yields null, '/tmp/tmpfile', fdSpy
         fs.unlink.callsArg 1
 
       afterEach ->
         tmp.file.restore()
         fs.writeFile.restore()
         fs.unlink.restore()
+        fs.close.restore()
 
       it 'writes the key to the temp file', ->
         sftp._writeKeyFile cbSpy
@@ -61,6 +66,9 @@ describe 'SFTP', ->
           cbSpy = sinon.spy()
           sftp._writeKeyFile cbSpy
 
+        it 'closes the file descriptor', ->
+          expect(fs.close).to.have.been.calledWith fdSpy
+
         it 'deletes the temp file', ->
           expect(fs.unlink).to.have.been.calledWith '/tmp/tmpfile'
 
@@ -72,6 +80,9 @@ describe 'SFTP', ->
           fs.writeFile.callsArg 2
           cbSpy = sinon.spy()
           sftp._writeKeyFile cbSpy
+
+        it 'closes the file descriptor', ->
+          expect(fs.close).to.have.been.calledWith fdSpy
 
         it 'makes a callback with ssh arguments as the first argument', ->
           expect(cbSpy).to.have.been.called
@@ -571,9 +582,20 @@ describe 'SFTP', ->
         expect(cbSpy).to.have.been.calledWith err
 
     context 'when temp file creation succeeds', ->
+      fdSpy = null
+
       beforeEach ->
-        tmp.file.yields null, '/tmp/action/tempfile'
+        fdSpy = sinon.spy()
+        tmp.file.yields null, '/tmp/action/tempfile', fdSpy
         sinon.stub sftp, '_runCommand'
+        sinon.stub fs, 'close'
+
+      afterEach ->
+        fs.close.restore()
+
+      it 'closes the file descriptor', ->
+        doAction()
+        expect(fs.close).to.have.been.calledWith fdSpy
 
       it 'calls _runCommand with get command', ->
         doAction()
@@ -852,12 +874,21 @@ describe 'SFTP', ->
         expect(cbSpy).to.have.been.calledWith err
 
     context 'when temp file creation succeeds', ->
+      fdSpy = null
+
       beforeEach ->
-        tmp.file.yields null, '/tmp/action/tempfile'
+        fdSpy = sinon.spy()
+        tmp.file.yields null, '/tmp/action/tempfile', fdSpy
         sinon.stub fs, 'writeFile'
+        sinon.stub fs, 'close'
 
       afterEach ->
         fs.writeFile.restore()
+        fs.close.restore()
+
+      it 'closes the file descriptor', ->
+        doAction()
+        expect(fs.close).to.have.been.calledWith fdSpy
 
       it 'attempts to write a given buffer into the temp file', ->
         doAction()
