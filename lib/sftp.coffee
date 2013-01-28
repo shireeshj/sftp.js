@@ -201,6 +201,6 @@ module.exports = class SFTP
       else
         callback new Error(lines.join "\n")
 
-  mv: (filePath, newFilePath, callback) ->
-    this._doBlankResponseCmd 'mv', filePath, newFilePath, callback
+  rename: (filePath, newFilePath, callback) ->
+    this._doBlankResponseCmd 'rename', filePath, newFilePath, callback
 
