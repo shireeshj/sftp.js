@@ -994,3 +994,57 @@ describe 'SFTP', ->
           '''
           done()
 
+  describe '#mv', ->
+    cbSpy = null
+
+    beforeEach ->
+      cbSpy = sinon.spy()
+      sinon.stub sftp, '_runCommand'
+
+    it 'calls _runCommand with mv command', ->
+      sftp.mv 'path/current', 'path/new', cbSpy
+      expect(sftp._runCommand).to.have.been.calledWith "mv 'path/current' 'path/new'"
+
+    context 'when _runCommand succeeds', ->
+      beforeEach ->
+        output = '''
+          mv path/current path/new 
+        ''' + '\nsftp> '
+        sftp._runCommand.callsArgWith 1, output
+
+      it 'returns no errors', (done) ->
+        sftp.mv 'path/current', 'path/new', (err) ->
+          expect(err).not.to.exist
+          done()
+
+    context 'when _runCommand fails with bad path', ->
+      beforeEach ->
+        output = '''
+          mv path/current path/new 
+          mv: cannot stat `another-file`: No such file or directory
+        ''' + '\nsftp> '
+        sftp._runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.mv 'path/current', 'path/new', (err) ->
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal 'mv: cannot stat `another-file`: No such file or directory'
+          done()
+
+    context 'when there are some other types of error', ->
+      beforeEach ->
+        output = '''
+          mv path/current path/new 
+          some random
+          error message
+        ''' + '\nsftp> '
+        sftp._runCommand.callsArgWith 1, output
+
+      it 'returns an error', (done) ->
+        sftp.mv 'path/current', 'path/new', (err) ->
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.equal '''
+            some random
+            error message
+          '''
+          done()
