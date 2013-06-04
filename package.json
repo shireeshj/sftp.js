@@ -11,6 +11,7 @@
   , "underscore"         : "1.4.x"
   , "tmp"                : "0.0.x"
   , "pty.js"             : "0.2.x"
+  , "ssh2"               : "0.2.x"
   }
 , "devDependencies": {
     "mocha"        : "1.9.x"

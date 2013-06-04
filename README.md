@@ -61,6 +61,11 @@ sftp.df('user', 'path/to/heaven', function (err, info:Object) {
 sftp.ln('path/to/file', 'path/to/link', function(err) {});
 ```
 
+## How to run test
+
+- Able to ssh into localhost
+
+
 ## LICENSE
 
 Copyright (c) 2012 Irrational Industries Inc. (Action.IO)
