@@ -11,7 +11,7 @@
   , "underscore"         : "1.4.x"
   , "tmp"                : "0.0.x"
   , "pty.js"             : "0.2.x"
-  , "ssh2"               : "0.2.x"
+  , "ssh2"               : "git+ssh://git@github.com:action-io/ssh2.git#39b92c1dc74a748a170aa5c1cae7a359b411e249"
   }
 , "devDependencies": {
     "mocha"        : "1.9.x"
