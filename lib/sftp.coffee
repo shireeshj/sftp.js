@@ -64,30 +64,22 @@ module.exports = class SFTP
     return callback?(new Error("NotReady")) unless @ready
     @sftp.rmdir dirPath, callback
 
-#  get: (filePath, callback) ->
-#    tmp.file (err, tmpFilePath, fd) =>
-#      fs.close(fd) if fd
-#      if err
-#        callback err
-#        return
-#      this._runCommand "get #{@constructor.escape filePath} #{@constructor.escape tmpFilePath}", (data) =>
-#        lines = data.split "\n"
-#        if lines.length != 3
-#          lines.shift()
-#          lines.pop()
-#          callback new Error(lines.join "\n")
-#        else
-#          childProcess.exec "file -b #{@constructor.escape tmpFilePath}", (err, fileType) ->
-#            if err
-#              fs.unlink tmpFilePath
-#              callback err
-#            else
-#              fs.readFile tmpFilePath, (err, data) ->
-#                fs.unlink tmpFilePath
-#                if err
-#                  callback err
-#                else
-#                  callback null, data, fileType
+  get: (filePath, callback) ->
+    tmp.file (err, tmpFilePath, fd) =>
+      fs.close(fd) if fd
+      return callback err if err
+      @sftp.fastGet filePath, tmpFilePath, (err) =>
+        if err
+          fs.unlink tmpFilePath
+          return callback(err) if err
+        childProcess.exec "file -b #{@constructor.escape tmpFilePath}", (err, fileType) ->
+          if err
+            fs.unlink tmpFilePath
+            return callback err
+          fs.readFile tmpFilePath, (err, data) ->
+            fs.unlink tmpFilePath
+            return callback err if err
+            callback null, data, fileType
 
 #  _runPutCommand: (localPath, remotePath, deleteAfterPut, callback) ->
 #    this._runCommand "put #{@constructor.escape localPath} #{@constructor.escape remotePath}", (data) ->
