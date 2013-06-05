@@ -81,26 +81,11 @@ module.exports = class SFTP
             return callback err if err
             callback null, data, fileType
 
-#  _runPutCommand: (localPath, remotePath, deleteAfterPut, callback) ->
-#    this._runCommand "put #{@constructor.escape localPath} #{@constructor.escape remotePath}", (data) ->
-#      lines = data.split "\n"
-#      lines.shift()
-#      lines.pop()
-#      fs.unlink localPath if deleteAfterPut
-#      if /^Uploading\s/.test lines.slice(-1)
-#        callback()
-#      else
-#        callback new Error(lines.join "\n")
-
-#  put: (localPath, remotePath, callback) ->
-#    fs.stat localPath, (err, stats) =>
-#      if err
-#        callback err
-#        return
-#      unless stats.isFile()
-#        callback new Error('local path does not point to a file')
-#        return
-#      this._runPutCommand localPath, remotePath, false, callback
+  put: (localPath, remotePath, callback) ->
+    fs.stat localPath, (err, stats) =>
+      return callback(err) if err
+      return callback(new Error("local path does not point to a file")) unless stats.isFile()
+      @sftp.fastPut localPath, remotePath, callback
 
 #  putData: (remotePath, contentData, callback) ->
 #    tmp.file (err, tmpFilePath, fd) =>

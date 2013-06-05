@@ -129,299 +129,46 @@ describe 'SFTP', ->
           expect(err.message).to.eql("No such file")
           done()
 
+  describe '#put', ->
+    localPath = null
+    remotePath = null
+
+    beforeEach (done) ->
+      localPath = testDir + "/fixtures/test.txt"
+      remotePath = testDir + "/fixtures/tmp.txt"
+      sftp.connect -> done()
+
+    afterEach (done) ->
+      fs.unlink remotePath, -> done()
+
+    it 'put the local file to a remote destination', (done) ->
+      sftp.put localPath, remotePath, (err) ->
+        expect(err).to.be.nil
+        expect(fs.readFileSync(localPath)).to.eql(fs.readFileSync(remotePath))
+        done()
+
+    context 'when the local path does not exist', ->
+      beforeEach -> localPath = testDir + "/fixtures/hahawathever"
+
+      it 'returns error', (done) ->
+        sftp.put localPath, remotePath, (err) ->
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.include "ENOENT"
+          expect(fs.existsSync(remotePath)).to.be.false
+          done()
+
+    context 'when the local path is not a file', ->
+      beforeEach -> localPath = testDir
+
+      it 'returns error', (done) ->
+        sftp.put localPath, remotePath, (err) ->
+          expect(err).to.be.an.instanceOf Error
+          expect(fs.existsSync(remotePath)).to.be.false
+          expect(err.message).to.eql "local path does not point to a file"
+          done()
+
   describe '#destroy', ->
     it 'ends the ssh connection', ->
-
-  #describe '#get', ->
-  #  cbSpy = null
-
-  #  beforeEach ->
-  #    cbSpy = sinon.spy()
-  #    sinon.stub tmp, 'file'
-
-  #  afterEach ->
-  #    tmp.file.restore()
-
-  #  doAction = ->
-  #    sftp.get 'path/to/remote-file', cbSpy
-
-  #  context 'when temp file creation fails', ->
-  #    err = null
-
-  #    beforeEach ->
-  #      err = new Error 'some error'
-  #      tmp.file.yields err
-  #      doAction()
-
-  #    it 'makes a callback with error', ->
-  #      expect(cbSpy).to.have.been.calledWith err
-
-  #  context 'when temp file creation succeeds', ->
-  #    fdSpy = null
-
-  #    beforeEach ->
-  #      fdSpy = sinon.spy()
-  #      tmp.file.yields null, '/tmp/action/tempfile', fdSpy
-  #      sinon.stub sftp, '_runCommand'
-  #      sinon.stub fs, 'close'
-
-  #    afterEach ->
-  #      fs.close.restore()
-
-  #    it 'closes the file descriptor', ->
-  #      doAction()
-  #      expect(fs.close).to.have.been.calledWith fdSpy
-
-  #    it 'calls _runCommand with get command', ->
-  #      doAction()
-  #      expect(sftp._runCommand).to.have.been.calledWith "get 'path/to/remote-file' '/tmp/action/tempfile'"
-
-  #    context 'when _runCommand succeeds', ->
-  #      beforeEach ->
-  #        output = '''
-  #          get 'path/to/remote-file' '/tmp/action/tempfile'
-  #          Fetching /home/foo/path/to/remote-file to remote-file
-  #        ''' + '\nsftp> '
-  #        sinon.stub fs, 'readFile'
-  #        sinon.stub fs, 'unlink'
-  #        sinon.stub childProcess, 'exec'
-  #        sftp._runCommand.callsArgWith 1, output
-
-  #      afterEach ->
-  #        fs.readFile.restore()
-  #        fs.unlink.restore()
-  #        childProcess.exec.restore()
-
-  #      it 'runs file command to determine file type', ->
-  #        doAction()
-  #        expect(childProcess.exec).to.have.been.calledWith "file -b '/tmp/action/tempfile'"
-
-  #      context 'when file command succeeds', ->
-  #        beforeEach ->
-  #          childProcess.exec.callsArgWith 1, null, 'some file type'
-
-  #        it 'reads the temp file', ->
-  #          doAction()
-  #          expect(fs.readFile).to.have.been.calledWith '/tmp/action/tempfile'
-  #          expect(fs.unlink).not.to.have.been.called
-
-  #        context 'when readFile succeeds', ->
-  #          beforeEach ->
-  #            fs.readFile.callsArgWith 1, null, new Buffer 'some file content'
-
-  #          it 'returns no errors', (done) ->
-  #            sftp.get 'path/to/remote-file', (err, data, fileType) ->
-  #              expect(err).not.to.exist
-  #              expect(data).to.be.an.instanceOf Buffer
-  #              expect(fileType).to.equal 'some file type'
-  #              expect(data.toString 'utf8').to.equal 'some file content'
-  #              expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
-  #              done()
-
-  #        context 'when readFile fails with error', ->
-  #          error = null
-
-  #          beforeEach ->
-  #            error = new Error 'some error'
-  #            childProcess.exec.callsArgWith 1, null, 'some file type'
-  #            fs.readFile.callsArgWith 1, error
-
-  #          it 'returns error', (done) ->
-  #            sftp.get 'path/to/remote-file', (err, data, fileType) ->
-  #              expect(err).to.equal error
-  #              expect(data).not.to.exist
-  #              expect(fileType).not.to.exist
-  #              expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
-  #              done()
-
-  #      context 'when exec fails with error', ->
-  #        error = null
-
-  #        beforeEach ->
-  #          error = new Error 'some error'
-  #          childProcess.exec.callsArgWith 1, error
-
-  #        it 'returns error', (done) ->
-  #          sftp.get 'path/to/remote-file', (err, data, fileType) ->
-  #            expect(err).to.equal error
-  #            expect(data).not.to.exist
-  #            expect(fileType).not.to.exist
-  #            expect(fs.unlink).to.have.been.calledWith '/tmp/action/tempfile'
-  #            done()
-
-  #    context 'when _runCommand fails with bad path', ->
-  #      beforeEach ->
-  #        output = '''
-  #          get 'path/to/remote-file' '/tmp/action/tempfile'
-  #          Couldn't stat remote file: No such file or directory
-  #          File "/home/ubuntu/remote-file" not found
-  #        ''' + '\nsftp> '
-  #        sftp._runCommand.callsArgWith 1, output
-
-  #      it 'returns an error', (done) ->
-  #        sftp.get 'path/to/remote-file', (err) ->
-  #          expect(err).to.be.an.instanceOf Error
-  #          expect(err.message).to.equal '''
-  #            Couldn\'t stat remote file: No such file or directory
-  #            File "/home/ubuntu/remote-file" not found
-  #          '''
-  #          done()
-
-  #    context 'when there are some other types of error', ->
-  #      beforeEach ->
-  #        output = '''
-  #          get 'path/to/remote-file' '/tmp/action/tempfile'
-  #          some random
-  #          error message
-  #          which spans more than 2 lines
-  #        ''' + '\nsftp> '
-  #        sftp._runCommand.callsArgWith 1, output
-
-  #      it 'returns an error', (done) ->
-  #        sftp.get 'path/to/remote-file', (err) ->
-  #          expect(err).to.be.an.instanceOf Error
-  #          expect(err.message).to.equal '''
-  #            some random
-  #            error message
-  #            which spans more than 2 lines
-  #          '''
-  #          done()
-
-  #describe '#_runPutCommand', ->
-  #  cbSpy = null
-
-  #  beforeEach ->
-  #    cbSpy = sinon.spy()
-  #    sinon.stub sftp, '_runCommand'
-
-  #  doAction = (deleteAfterPut=false) ->
-  #    sftp._runPutCommand '/local/path', '/remote/path', deleteAfterPut, cbSpy
-
-  #  it 'calls _runCommand with put command', ->
-  #    doAction()
-  #    expect(sftp._runCommand).to.have.been.calledWith "put '/local/path' '/remote/path'"
-
-  #    context 'when _runCommand callback is invoked', ->
-  #      beforeEach ->
-  #        sftp._runCommand.callsArgWith 1, ''
-  #        sinon.stub fs, 'unlink'
-
-  #      afterEach ->
-  #        fs.unlink.restore()
-
-  #      context 'when deleteAfterPut arg is true', ->
-  #        beforeEach ->
-  #          doAction true
-
-  #        it 'deletes the local file', ->
-  #          expect(fs.unlink).to.have.been.calledWith '/local/path'
-
-  #      context 'when deleteAfterPut arg is false', ->
-  #        beforeEach ->
-  #          doAction false
-
-  #        it 'does not the local file', ->
-  #          expect(fs.unlink).not.to.have.been.calledWith '/local/path'
-
-  #  context 'when _runCommand succeeds', ->
-  #    beforeEach ->
-  #      output = '''
-  #        put /local/path /remote/path
-  #        Uploading tempfile to /remote/path
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-  #      doAction()
-
-  #    it 'returns no errors', ->
-  #      doAction()
-  #      expect(cbSpy).to.have.been.called
-  #      expect(cbSpy.args[0][0]).not.to.exist
-
-  #  context 'when _runCommand fails with bad path', ->
-  #    beforeEach ->
-  #      output = '''
-  #        put /local/path /remote/path
-  #        stat tempfile: No such file or directory
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-  #      doAction()
-
-  #    it 'returns an error', ->
-  #      expect(cbSpy).to.have.been.called
-  #      expect(cbSpy.args[0][0]).to.be.an.instanceOf Error
-  #      expect(cbSpy.args[0][0].message).to.equal 'stat tempfile: No such file or directory'
-
-  #  context 'when _runCommand fails with some other error', ->
-  #    beforeEach ->
-  #      output = '''
-  #        put /local/path /remote/path
-  #        Uploading tempfile to /remote/path
-  #        Connection Interrupted Due To Alien Invasion
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-  #      doAction()
-
-  #    it 'returns an error', ->
-  #      expect(cbSpy).to.have.been.called
-  #      expect(cbSpy.args[0][0]).to.be.an.instanceOf Error
-  #      expect(cbSpy.args[0][0].message).to.equal '''
-  #        Uploading tempfile to /remote/path
-  #        Connection Interrupted Due To Alien Invasion
-  #      '''
-
-  #describe '#put', ->
-  #  cbSpy = null
-
-  #  beforeEach ->
-  #    cbSpy = sinon.spy()
-  #    sinon.stub fs, 'stat'
-
-  #  afterEach ->
-  #    fs.stat.restore()
-
-  #  doAction = ->
-  #    sftp.put '/local/path', '/remote/path', cbSpy
-
-  #  it 'does fs.stat to check whether local file exists', ->
-  #    doAction()
-  #    expect(fs.stat).to.have.been.calledWith '/local/path'
-
-  #  context 'when fs.stat returns error', ->
-  #    err = null
-
-  #    beforeEach ->
-  #      err = new Error
-  #      fs.stat.callsArgWith 1, err
-  #      doAction()
-
-  #    it 'makes a callback with error', ->
-  #      expect(cbSpy).to.have.been.calledWith err
-
-  #  context 'when fs.stat returns stat object', ->
-  #    mockStats = null
-
-  #    beforeEach ->
-  #      mockStats = { isFile: sinon.stub() }
-  #      fs.stat.callsArgWith 1, null, mockStats
-
-  #    context 'when the path is not a file', ->
-  #      beforeEach ->
-  #        mockStats.isFile.returns false
-  #        doAction()
-
-  #      it 'makes a callback with error', ->
-  #        expect(cbSpy).to.have.been.called
-  #        expect(cbSpy.args[0][0]).to.be.an.instanceOf Error
-  #        expect(cbSpy.args[0][0].message).to.equal 'local path does not point to a file'
-
-  #    context 'when the path is a file', ->
-  #      beforeEach ->
-  #        sinon.stub sftp, '_runPutCommand'
-  #        mockStats.isFile.returns true
-
-  #      it 'calls _runPutCommand', ->
-  #        doAction()
-  #        expect(sftp._runPutCommand).to.have.been.calledWith '/local/path', '/remote/path', false, cbSpy
 
   #describe '#putData', ->
   #  cbSpy = null
