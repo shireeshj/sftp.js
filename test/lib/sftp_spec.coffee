@@ -1,13 +1,7 @@
 SFTP = require '../../lib/sftp'
-_ = require 'underscore'
 fs = require 'fs'
-childProcess = require 'child_process'
 tmp = require 'tmp'
-pty = require 'pty.js'
-fs = require 'fs'
 path = require 'path'
-EventEmitter = require('events').EventEmitter
-CommandQueue = require '../../lib/command_queue'
 
 describe 'SFTP', ->
   @timeout 5000
@@ -16,7 +10,7 @@ describe 'SFTP', ->
   testDir = null
 
   beforeEach ->
-    privateKey = fs.readFileSync '/home/action/.ssh/nopass_id_rsa', 'utf8'
+    privateKey = fs.readFileSync process.env.HOME + '/.ssh/nopass_id_rsa', 'utf8'
     testDir = path.resolve(__dirname, "..")
     sftp = new SFTP host: 'localhost', port: 65100, user: 'action', key: privateKey
 

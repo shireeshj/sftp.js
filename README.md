@@ -1,5 +1,8 @@
 # sftp library for node
 
+This is a wrapper around [ssh2](https://github.com/mscdex/ssh2) to have a
+usable api
+
 Run it using `en_US.UTF-8` locale.
 
 `export LC_ALL=en_US.UTF-8`
@@ -19,9 +22,7 @@ sftp.connect(function(err) {
   // once sftp is connected this callback is invoked
 });
 
-sftp.destroy(function () {
-  // ends sftp connection and kills pty
-});
+sftp.destroy();
 
 sftp.ls('path/to/heaven', function(err, list:Array) {
   /* list:
@@ -63,8 +64,11 @@ sftp.ln('path/to/file', 'path/to/link', function(err) {});
 
 ## How to run test
 
-- Able to ssh into localhost
-
+- Required the current host to be able to ssh with a no-passphrase key located
+  at `$HOME/.ssh/nopass_id_rsa`
+- You can create the key with `ssh-keygen -N "" -b 1024 -t rsa -q`, change the
+  location to `$HOME/.ssh/nopass_id_rsa` and add `nopass_id_rsa.pub` to
+  `authorized_keys` file
 
 ## LICENSE
 
