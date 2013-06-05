@@ -37,7 +37,7 @@ module.exports = class SFTP
     this.output "ls -la #{@constructor.escape filePath}", (err, data, code, signal) ->
       return callback?(new Error(data)) if code != 0
       lines = data.split "\n"
-      lines.shift()
+      lines.shift() if lines.length > 2
       lines.pop()
       files = []
       errors = null

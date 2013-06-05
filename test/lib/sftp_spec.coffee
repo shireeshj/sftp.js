@@ -66,6 +66,14 @@ describe 'SFTP', ->
         ]
         done()
 
+    context 'when list a single file', ->
+      it 'parses the output and generates an array of directories and files', (done) ->
+        sftp.ls testDir + "/mocha.opts", (err, data) ->
+          expect(data).to.eql [
+            [path.join(testDir, 'mocha.opts'), false, 92],
+          ]
+          done()
+
     context 'when no such file or directory', ->
       it 'returns an error', (done) ->
         sftp.ls testDir + "/hahaha", (err, data) ->
