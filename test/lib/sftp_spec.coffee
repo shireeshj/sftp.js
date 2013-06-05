@@ -124,6 +124,15 @@ describe 'SFTP', ->
         expect(fileType).to.eql "ASCII text\n"
         done()
 
+    it 'gets file with empty content', (done) ->
+      newFile = testDir + "/fixtures/new.txt" 
+      fs.openSync newFile, "w"
+      sftp.get newFile, (err, data, fileType) ->
+        fs.unlinkSync newFile
+        expect(data.toString()).to.eql ""
+        expect(fileType).to.eql "empty\n"
+        done()
+
     context 'when trying to read a non-existing file', ->
       it 'returns an error', (done) ->
         sftp.get testDir + "/fixtures/invalid-file.txt", (err, data, fileType) ->
