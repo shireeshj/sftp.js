@@ -90,15 +90,8 @@ module.exports = class SFTP
   putData: (remotePath, content, callback) ->
     @sftp.writeFile remotePath, content, callback
 
-#  rm: (filePath, callback) ->
-#    this._runCommand "rm #{@constructor.escape filePath}", (data) ->
-#      lines = data.split "\n"
-#      lines.shift()
-#      lines.pop()
-#      if /^Removing\s/.test lines.slice(-1)
-#        callback()
-#      else
-#        callback new Error(lines.join "\n")
+  rm: (remotePath, callback) ->
+    @sftp.unlink remotePath, callback
 
 #  rename: (filePath, newFilePath, callback) ->
 #    this._doBlankResponseCmd 'rename', filePath, newFilePath, callback
@@ -193,8 +186,6 @@ module.exports = class SFTP
 #        callback data
 #        @queue.dequeue()
 #      @pty.write command + "\n"
-
-
 
 #  ls: (filePath, callback) ->
 #    this._runCommand "ls -la #{@constructor.escape filePath}", (data) ->

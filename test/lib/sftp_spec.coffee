@@ -191,88 +191,38 @@ describe 'SFTP', ->
           expect(err).to.be.an.instanceOf Error
           done()
 
+  describe '#rm', ->
+    remotePath = null
+
+    beforeEach (done) ->
+      remotePath = testDir + "/fixtures/tmp.txt"
+      fs.writeFileSync remotePath, "wow"
+      sftp.connect -> done()
+
+    afterEach (done) ->
+      fs.unlink remotePath, -> done()
+
+    it 'removes the remote path', (done) ->
+      sftp.rm remotePath, (err) ->
+        expect(err).to.be.nil
+        expect(fs.existsSync(remotePath)).to.be.false
+        done()
+
+    context 'when the path is invalid', ->
+      invalidPath = null
+
+      beforeEach (done) ->
+        invalidPath = testDir + "/fixtures/invalid-file.txt"
+        fs.unlink invalidPath, -> done()
+
+      it 'returns an error', (done) ->
+        sftp.rm invalidPath, (err) ->
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.eql "No such file"
+          done()
+
   describe '#destroy', ->
     it 'ends the ssh connection', ->
-
-  #describe '#rm', ->
-  #  cbSpy = null
-
-  #  beforeEach ->
-  #    cbSpy = sinon.spy()
-  #    sinon.stub sftp, '_runCommand'
-
-  #  it 'calls _runCommand with rm command', ->
-  #    sftp.rm 'remote-file', cbSpy
-  #    expect(sftp._runCommand).to.have.been.calledWith "rm 'remote-file'"
-
-  #  context 'when _runCommand succeeds', ->
-  #    beforeEach ->
-  #      output = '''
-  #        rm remote-file
-  #        Removing remote-file
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-
-  #    it 'returns no errors', (done) ->
-  #      sftp.rm 'remote-file', (err) ->
-  #        expect(err).not.to.exist
-  #        done()
-
-  #  context 'when _runCommand fails with bad path', ->
-  #    beforeEach ->
-  #      output = '''
-  #        rm unknown-file
-  #        Couldn't stat remote file: No such file or directory
-  #        Removing /home/foo/unknown-file
-  #        Couldn't delete file: No such file or directory
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-
-  #    it 'returns an error', (done) ->
-  #      sftp.rm 'unknown-file', (err) ->
-  #        expect(err).to.be.an.instanceOf Error
-  #        expect(err.message).to.equal '''
-  #          Couldn't stat remote file: No such file or directory
-  #          Removing /home/foo/unknown-file
-  #          Couldn't delete file: No such file or directory
-  #        '''
-  #        done()
-
-  #  context 'when _runCommand fails with bad path', ->
-  #    beforeEach ->
-  #      output = '''
-  #        rm unknown-file
-  #        Failed to remove /home/foo/unknown-file
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-
-  #    it 'returns an error', (done) ->
-  #      sftp.rm 'unknow-file', (err) ->
-  #        expect(err).to.be.an.instanceOf Error
-  #        expect(err.message).to.equal '''
-  #          Failed to remove /home/foo/unknown-file
-  #        '''
-  #        done()
-
-  #  context 'when there are some other types of error', ->
-  #    beforeEach ->
-  #      output = '''
-  #        rm remote-file
-  #        Removing /home/foo/unknown-file
-  #        some random
-  #        error message
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-
-  #    it 'returns an error', (done) ->
-  #      sftp.rm 'remote-file', (err) ->
-  #        expect(err).to.be.an.instanceOf Error
-  #        expect(err.message).to.equal '''
-  #          Removing /home/foo/unknown-file
-  #          some random
-  #          error message
-  #        '''
-  #        done()
 
   #describe '#rename', ->
   #  cbSpy = null
