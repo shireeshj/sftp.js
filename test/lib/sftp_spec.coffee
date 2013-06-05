@@ -221,60 +221,45 @@ describe 'SFTP', ->
           expect(err.message).to.eql "No such file"
           done()
 
+  describe '#rename', ->
+    remotePath = null
+    newPath = null
+
+    beforeEach (done) ->
+      remotePath = testDir + "/fixtures/tmp.txt"
+      newPath = testDir + "/fixtures/newtmp.txt"
+      fs.writeFileSync remotePath, "wow"
+      sftp.connect -> done()
+
+    afterEach (done) ->
+      fs.unlink remotePath, ->
+        fs.unlink newPath, -> done()
+
+    it 'renames the remote file', (done) ->
+      sftp.rename remotePath, newPath, (err) ->
+        expect(err).to.be.nil
+        expect(fs.existsSync(remotePath)).to.be.false
+        expect(fs.existsSync(newPath)).to.be.true
+        expect(fs.readFileSync(newPath).toString()).to.eql "wow"
+        done()
+
+    context 'when the remotePath does not exist', ->
+      beforeEach (done) ->
+        fs.unlinkSync remotePath
+        remotePath = testDir + "/fixtures/invalid-path.txt"
+        fs.unlink remotePath, -> done()
+
+      it 'returns an error', (done) ->
+        sftp.rename remotePath, newPath, (err) ->
+          expect(err).to.be.an.instanceOf Error
+          expect(err.message).to.eql "No such file"
+          expect(fs.existsSync(newPath)).to.be.false
+          done()
+
   describe '#destroy', ->
+    beforeEach (done) -> sftp.connect -> done()
+
     it 'ends the ssh connection', ->
-
-  #describe '#rename', ->
-  #  cbSpy = null
-
-  #  beforeEach ->
-  #    cbSpy = sinon.spy()
-  #    sinon.stub sftp, '_runCommand'
-
-  #  it 'calls _runCommand with mv command', ->
-  #    sftp.rename 'path/current', 'path/new', cbSpy
-  #    expect(sftp._runCommand).to.have.been.calledWith "rename 'path/current' 'path/new'"
-
-  #  context 'when _runCommand succeeds', ->
-  #    beforeEach ->
-  #      output = '''
-  #        rename path/current path/new 
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-
-  #    it 'returns no errors', (done) ->
-  #      sftp.rename 'path/current', 'path/new', (err) ->
-  #        expect(err).not.to.exist
-  #        done()
-
-  #  context 'when _runCommand fails with bad path', ->
-  #    beforeEach ->
-  #      output = '''
-  #        rename path/current path/new 
-  #        Couldn't rename file "path/current" to "path/new": No such file or directory
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-
-  #    it 'returns an error', (done) ->
-  #      sftp.rename 'path/current', 'path/new', (err) ->
-  #        expect(err).to.be.an.instanceOf Error
-  #        expect(err.message).to.equal 'Couldn\'t rename file "path/current" to "path/new": No such file or directory'
-  #        done()
-
-  #  context 'when there are some other types of error', ->
-  #    beforeEach ->
-  #      output = '''
-  #        rename path/current path/new
-  #        some random
-  #        error message
-  #      ''' + '\nsftp> '
-  #      sftp._runCommand.callsArgWith 1, output
-
-  #    it 'returns an error', (done) ->
-  #      sftp.rename 'path/current', 'path/new', (err) ->
-  #        expect(err).to.be.an.instanceOf Error
-  #        expect(err.message).to.equal '''
-  #          some random
-  #          error message
-  #        '''
-  #        done()
+      sftp.destroy()
+      expect(sftp.ready).to.be.false
+      expect(sftp.sftp).to.be.nil
