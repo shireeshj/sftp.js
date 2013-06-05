@@ -66,13 +66,6 @@ describe 'SFTP', ->
         ]
         done()
 
-    context 'when path is empty', ->
-      it 'generates the content for $HOME directory', (done) ->
-        sftp.ls "", (err, data) ->
-          expect(err).to.be.nil
-          expect(data).not.to.be.empty
-          done()
-
     context 'when no such file or directory', ->
       it 'returns an error', (done) ->
         sftp.ls testDir + "/hahaha", (err, data) ->
