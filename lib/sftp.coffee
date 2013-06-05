@@ -34,7 +34,8 @@ module.exports = class SFTP
 
   ls: (filePath, callback) ->
     return callback?(new Error("NotReady")) unless @ready
-    this.output "ls -la #{@constructor.escape filePath}", (err, data, code, signal) ->
+    filePath = if filePath == "" then "~" else @constructor.escape filePath
+    this.output "ls -la #{filePath}", (err, data, code, signal) ->
       return callback?(new Error(data)) if code != 0
       lines = data.split "\n"
       lines.shift()
