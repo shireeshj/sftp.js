@@ -87,17 +87,8 @@ module.exports = class SFTP
       return callback(new Error("local path does not point to a file")) unless stats.isFile()
       @sftp.fastPut localPath, remotePath, callback
 
-#  putData: (remotePath, contentData, callback) ->
-#    tmp.file (err, tmpFilePath, fd) =>
-#      fs.close(fd) if fd
-#      if err
-#        callback err
-#        return
-#      fs.writeFile tmpFilePath, contentData, (err) =>
-#        if err
-#          callback err
-#          return
-#        this._runPutCommand tmpFilePath, remotePath, true, callback
+  putData: (remotePath, content, callback) ->
+    @sftp.writeFile remotePath, content, callback
 
 #  rm: (filePath, callback) ->
 #    this._runCommand "rm #{@constructor.escape filePath}", (data) ->

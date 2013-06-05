@@ -167,74 +167,32 @@ describe 'SFTP', ->
           expect(err.message).to.eql "local path does not point to a file"
           done()
 
+  describe '#putData', ->
+    remotePath = null
+
+    beforeEach (done) ->
+      remotePath = testDir + "/fixtures/tmp.txt"
+      sftp.connect -> done()
+
+    afterEach (done) ->
+      fs.unlink remotePath, -> done()
+
+    it 'writes the content to the remote destination', (done) ->
+      sftp.putData remotePath, "tmp content", (err) ->
+        expect(err).to.be.nil
+        expect(fs.readFileSync(remotePath).toString()).to.eql "tmp content"
+        done()
+
+    context "when the remote path is not writable", ->
+      beforeEach -> remotePath = testDir + "/fixtures"
+
+      it 'returns an error', (done) ->
+        sftp.putData remotePath, "tmp content", (err) ->
+          expect(err).to.be.an.instanceOf Error
+          done()
+
   describe '#destroy', ->
     it 'ends the ssh connection', ->
-
-  #describe '#putData', ->
-  #  cbSpy = null
-  #  buf = new Buffer 'some text'
-
-  #  beforeEach ->
-  #    cbSpy = sinon.spy()
-  #    sinon.stub tmp, 'file'
-
-  #  afterEach ->
-  #    tmp.file.restore()
-
-  #  doAction = ->
-  #    sftp.putData '/remote/path', buf, cbSpy
-
-  #  context 'when temp file creation fails', ->
-  #    err = null
-
-  #    beforeEach ->
-  #      err = new Error 'some error'
-  #      tmp.file.yields err
-  #      doAction()
-
-  #    it 'makes a callback with error', ->
-  #      expect(cbSpy).to.have.been.calledWith err
-
-  #  context 'when temp file creation succeeds', ->
-  #    fdSpy = null
-
-  #    beforeEach ->
-  #      fdSpy = sinon.spy()
-  #      tmp.file.yields null, '/tmp/action/tempfile', fdSpy
-  #      sinon.stub fs, 'writeFile'
-  #      sinon.stub fs, 'close'
-
-  #    afterEach ->
-  #      fs.writeFile.restore()
-  #      fs.close.restore()
-
-  #    it 'closes the file descriptor', ->
-  #      doAction()
-  #      expect(fs.close).to.have.been.calledWith fdSpy
-
-  #    it 'attempts to write a given buffer into the temp file', ->
-  #      doAction()
-  #      expect(fs.writeFile).to.have.been.calledWith '/tmp/action/tempfile', buf
-
-  #    context 'when writing the given buffer into the temp file fails', ->
-  #      err = null
-
-  #      beforeEach ->
-  #        err = new Error 'some error'
-  #        fs.writeFile.callsArgWith 2, err
-  #        doAction()
-
-  #      it 'makes a callback with error', ->
-  #        expect(cbSpy).to.have.been.calledWith err
-
-  #    context 'when writing a given buffer into the temp file succeeds', ->
-  #      beforeEach ->
-  #        fs.writeFile.callsArg 2
-  #        sinon.stub sftp, '_runPutCommand'
-
-  #      it 'calls _runPutCommand', ->
-  #        doAction()
-  #        expect(sftp._runPutCommand).to.have.been.calledWith '/tmp/action/tempfile', '/remote/path', true, cbSpy
 
   #describe '#rm', ->
   #  cbSpy = null
