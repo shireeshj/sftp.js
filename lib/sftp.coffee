@@ -65,7 +65,8 @@ module.exports = class SFTP
   rmdir: (dirPath, callback) ->
     return callback?(new Error("NotReady")) unless @ready
     dirPath = path.join @remotePrefix, dirPath if this.assumeRelativePath()
-    @sftp.rmdir dirPath, callback
+    this.output "rm -r #{@constructor.escape dirPath}", (err, data, code, signal) ->
+      callback(err)
 
   get: (filePath, callback) ->
     return callback?(new Error("NotReady")) unless @ready
@@ -117,7 +118,11 @@ module.exports = class SFTP
       return callback?(err) if err
       data = ""
       stream.on 'data', (d) => data += d.toString()
-      stream.on 'exit', (code, signal) -> callback?(null, data, code, signal)
+      stream.on 'exit', (code, signal) ->
+        if code > 0
+          callback?(new Error(data), data, code, signal)
+        else
+          callback?(null, data, code, signal)
 
   assumeRelativePath: ->
     @remotePrefix && @remotePrefix.length > 0

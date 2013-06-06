@@ -2,6 +2,7 @@ SFTP = require '../../lib/sftp'
 fs = require 'fs'
 tmp = require 'tmp'
 path = require 'path'
+{ exec } = require 'child_process'
 
 describe 'SFTP', ->
   @timeout 5000
@@ -102,7 +103,7 @@ describe 'SFTP', ->
     it 'creates a new directory', (done) ->
       sftp.mkdir '/tmp/hello', (err) ->
         expect(fs.existsSync('/tmp/hello')).to.be.true
-        fs.rmdirSync '/tmp/hello'
+        exec "rm -rf /tmp/hello"
         done()
 
     it 'considers remote prefix when creating directory', (done) ->
@@ -110,7 +111,7 @@ describe 'SFTP', ->
       newDir = relativeTestDir + "/tmp"
       sftp.mkdir newDir, (err, data) ->
         expect(fs.existsSync(path.join(home, newDir))).to.be.true
-        fs.rmdirSync path.join(home, newDir)
+        exec "rm -rf #{path.join(home, newDir)}"
         done()
 
     context 'when it can not create a new directory', ->
@@ -126,7 +127,7 @@ describe 'SFTP', ->
       sftp.connect -> done()
 
     afterEach (done) ->
-      fs.rmdir "/tmp/hello", -> done()
+      exec "rm -rf /tmp/hello", -> done()
 
     it 'removes the directory', (done) ->
       sftp.rmdir '/tmp/hello', (err) ->
@@ -141,11 +142,19 @@ describe 'SFTP', ->
         expect(fs.existsSync(path.join(home, newDir))).to.be.false
         done()
 
+    context 'when the directory has content', ->
+      it 'removes the directory', (done) ->
+        fs.writeFileSync '/tmp/hello/test', "tmp content"
+        fs.mkdirSync '/tmp/hello/newdir'
+        sftp.rmdir '/tmp/hello', (err) ->
+          expect(fs.existsSync('/tmp/hello')).to.be.false
+          done()
+
     context 'when it can not remove the directory', ->
       it 'returns an error', (done) ->
         sftp.rmdir '/haha-failed', (err) ->
           expect(err).to.be.an.instanceOf Error
-          expect(err.message).to.eql "No such file"
+          expect(err.message).to.include "No such file or directory"
           done()
 
   describe '#get', ->
