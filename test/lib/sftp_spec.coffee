@@ -8,10 +8,14 @@ describe 'SFTP', ->
   sftp = null
   privateKey = null
   testDir = null
+  relativeTestDir = null
+  home = null
 
   beforeEach ->
+    home = process.env.HOME
     privateKey = fs.readFileSync process.env.HOME + '/.ssh/nopass_id_rsa', 'utf8'
     testDir = path.resolve(__dirname, "..")
+    relativeTestDir = testDir.replace home, ""
     sftp = new SFTP host: 'localhost', port: 65100, user: 'action', key: privateKey
 
   it 'stores the login information in ivars', ->
@@ -66,6 +70,17 @@ describe 'SFTP', ->
         ]
         done()
 
+    it 'considers remote prefix when generating outputs', (done) ->
+      sftp.remotePrefix = home
+      sftp.ls relativeTestDir, (err, data) ->
+        expect(data).to.eql [
+          ['fixtures', true, 4096],
+          ['lib', true, 4096],
+          ['mocha.opts', false, 92],
+          ['spec_helper.coffee', false, 431],
+        ]
+        done()
+
     context 'when list a single file', ->
       it 'parses the output and generates an array of directories and files', (done) ->
         sftp.ls testDir + "/mocha.opts", (err, data) ->
@@ -90,6 +105,14 @@ describe 'SFTP', ->
         fs.rmdirSync '/tmp/hello'
         done()
 
+    it 'considers remote prefix when creating directory', (done) ->
+      sftp.remotePrefix = home
+      newDir = relativeTestDir + "/tmp"
+      sftp.mkdir newDir, (err, data) ->
+        expect(fs.existsSync(path.join(home, newDir))).to.be.true
+        fs.rmdirSync path.join(home, newDir)
+        done()
+
     context 'when it can not create a new directory', ->
       it 'returns an error', (done) ->
         sftp.mkdir '/whatever', (err) ->
@@ -102,9 +125,20 @@ describe 'SFTP', ->
       fs.mkdirSync "/tmp/hello"
       sftp.connect -> done()
 
+    afterEach (done) ->
+      fs.rmdir "/tmp/hello", -> done()
+
     it 'removes the directory', (done) ->
       sftp.rmdir '/tmp/hello', (err) ->
         expect(fs.existsSync('/tmp/hello')).to.be.false
+        done()
+
+    it 'considers remote prefix when removing the directory', (done) ->
+      sftp.remotePrefix = home
+      newDir = relativeTestDir + "/tmp"
+      fs.mkdirSync path.join(home, newDir)
+      sftp.rmdir newDir, (err, data) ->
+        expect(fs.existsSync(path.join(home, newDir))).to.be.false
         done()
 
     context 'when it can not remove the directory', ->
@@ -120,6 +154,14 @@ describe 'SFTP', ->
 
     it 'gets the content and file type given a file path', (done) ->
       sftp.get testDir + "/fixtures/test.txt", (err, data, fileType) ->
+        expect(data.toString()).to.eql "This is a test file\n"
+        expect(fileType).to.eql "ASCII text\n"
+        done()
+
+    it 'considers remote prefix when fetching the file', (done) ->
+      sftp.remotePrefix = home
+      testFile = relativeTestDir + "/fixtures/test.txt"
+      sftp.get testFile, (err, data, fileType) ->
         expect(data.toString()).to.eql "This is a test file\n"
         expect(fileType).to.eql "ASCII text\n"
         done()
@@ -154,6 +196,14 @@ describe 'SFTP', ->
 
     it 'put the local file to a remote destination', (done) ->
       sftp.put localPath, remotePath, (err) ->
+        expect(err).to.be.nil
+        expect(fs.readFileSync(localPath)).to.eql(fs.readFileSync(remotePath))
+        done()
+
+    it 'considers remote prefix when putting the file', (done) ->
+      sftp.remotePrefix = home
+      testFile = relativeTestDir + "/fixtures/tmp.txt"
+      sftp.put localPath, testFile, (err) ->
         expect(err).to.be.nil
         expect(fs.readFileSync(localPath)).to.eql(fs.readFileSync(remotePath))
         done()
@@ -194,6 +244,23 @@ describe 'SFTP', ->
         expect(fs.readFileSync(remotePath).toString()).to.eql "tmp content"
         done()
 
+    it 'considers remote prefix when saving the file', (done) ->
+      sftp.remotePrefix = home
+      testFile = relativeTestDir + "/fixtures/tmp.txt"
+      sftp.putData testFile, "tmp content", (err) ->
+        expect(err).to.be.nil
+        expect(fs.readFileSync(remotePath).toString()).to.eql "tmp content"
+        done()
+
+    context "when the remote path does not exist and content is empty", ->
+      it 'creates a empty file at remote path', (done) ->
+        fs.unlink remotePath, ->
+          sftp.putData remotePath, "", (err) ->
+            expect(err).to.be.nil
+            expect(fs.existsSync(remotePath)).to.be.true
+            expect(fs.readFileSync(remotePath).toString()).to.be.empty
+            done()
+
     context "when the remote path is not writable", ->
       beforeEach -> remotePath = testDir + "/fixtures"
 
@@ -215,6 +282,14 @@ describe 'SFTP', ->
 
     it 'removes the remote path', (done) ->
       sftp.rm remotePath, (err) ->
+        expect(err).to.be.nil
+        expect(fs.existsSync(remotePath)).to.be.false
+        done()
+
+    it 'considers remote prefix when removing the file', (done) ->
+      sftp.remotePrefix = home
+      testFile = relativeTestDir + "/fixtures/tmp.txt"
+      sftp.rm testFile, (err) ->
         expect(err).to.be.nil
         expect(fs.existsSync(remotePath)).to.be.false
         done()
@@ -248,6 +323,17 @@ describe 'SFTP', ->
 
     it 'renames the remote file', (done) ->
       sftp.rename remotePath, newPath, (err) ->
+        expect(err).to.be.nil
+        expect(fs.existsSync(remotePath)).to.be.false
+        expect(fs.existsSync(newPath)).to.be.true
+        expect(fs.readFileSync(newPath).toString()).to.eql "wow"
+        done()
+
+    it 'considers remote prefix when renaming the file', (done) ->
+      sftp.remotePrefix = home
+      testFile = relativeTestDir + "/fixtures/tmp.txt"
+      newTestFile = relativeTestDir + "/fixtures/newtmp.txt"
+      sftp.rename testFile, newTestFile, (err) ->
         expect(err).to.be.nil
         expect(fs.existsSync(remotePath)).to.be.false
         expect(fs.existsSync(newPath)).to.be.true

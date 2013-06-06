@@ -11,6 +11,7 @@ module.exports = class SFTP
     @port = login.port
     @user = login.user
     @key = login.key
+    @remotePrefix = login.remotePrefix
     @ssh = new Connection()
     @ready = false
 
@@ -34,6 +35,7 @@ module.exports = class SFTP
 
   ls: (filePath, callback) ->
     return callback?(new Error("NotReady")) unless @ready
+    filePath = path.join @remotePrefix, filePath if this.assumeRelativePath()
     this.output "ls -la #{@constructor.escape filePath}", (err, data, code, signal) ->
       return callback?(new Error(data)) if code != 0
       lines = data.split "\n"
@@ -57,10 +59,12 @@ module.exports = class SFTP
 
   mkdir: (dirPath, callback) ->
     return callback?(new Error("NotReady")) unless @ready
+    dirPath = path.join @remotePrefix, dirPath if this.assumeRelativePath()
     @sftp.mkdir dirPath, callback
 
   rmdir: (dirPath, callback) ->
     return callback?(new Error("NotReady")) unless @ready
+    dirPath = path.join @remotePrefix, dirPath if this.assumeRelativePath()
     @sftp.rmdir dirPath, callback
 
   get: (filePath, callback) ->
@@ -68,6 +72,7 @@ module.exports = class SFTP
     tmp.file (err, tmpFilePath, fd) =>
       fs.close(fd) if fd
       return callback err if err
+      filePath = path.join @remotePrefix, filePath if this.assumeRelativePath()
       @sftp.fastGet filePath, tmpFilePath, (err) =>
         if err
           fs.unlink tmpFilePath
@@ -86,18 +91,24 @@ module.exports = class SFTP
     fs.stat localPath, (err, stats) =>
       return callback(err) if err
       return callback(new Error("local path does not point to a file")) unless stats.isFile()
+      remotePath = path.join @remotePrefix, remotePath if this.assumeRelativePath()
       @sftp.fastPut localPath, remotePath, callback
 
   putData: (remotePath, content, callback) ->
     return callback?(new Error("NotReady")) unless @ready
+    remotePath = path.join @remotePrefix, remotePath if this.assumeRelativePath()
     @sftp.writeFile remotePath, content, callback
 
   rm: (remotePath, callback) ->
     return callback?(new Error("NotReady")) unless @ready
+    remotePath = path.join @remotePrefix, remotePath if this.assumeRelativePath()
     @sftp.unlink remotePath, callback
 
   rename: (remotePath, newRemotePath, callback) ->
     return callback?(new Error("NotReady")) unless @ready
+    if this.assumeRelativePath()
+      remotePath = path.join @remotePrefix, remotePath
+      newRemotePath = path.join @remotePrefix, newRemotePath
     @sftp.rename remotePath, newRemotePath, callback
 
   output: (cmd, callback) ->
@@ -107,6 +118,9 @@ module.exports = class SFTP
       data = ""
       stream.on 'data', (d) => data += d.toString()
       stream.on 'exit', (code, signal) -> callback?(null, data, code, signal)
+
+  assumeRelativePath: ->
+    @remotePrefix && @remotePrefix.length > 0
 
   @escape: (string) ->
     if typeof string == 'string'
